@@ -5,13 +5,11 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { Swords, Goal, Replace, FileText, Loader2 } from 'lucide-react';
-import { getEventsForFixture } from '@/app/actions'; // Import the new Server Action
+import { getEventsForFixture } from '@/app/actions';
 
-// --- Reusable Event Icon Component ---
 const EventIcon = ({ event }: { event: any }) => {
     let icon;
     let colorClass;
-
     switch (event.type) {
         case 'Goal':
             icon = <Goal size={18} />;
@@ -37,7 +35,6 @@ const EventIcon = ({ event }: { event: any }) => {
     );
 };
 
-// --- Reusable Event Card Component ---
 const EventCard = ({ event, teamLogo }: { event: any, teamLogo: string }) => (
     <div className="bg-[#343c4c] p-3 rounded-lg w-full flex items-center gap-3">
         <Image src={teamLogo} alt={event.team.name} width={24} height={24} className="object-contain" />
@@ -48,32 +45,19 @@ const EventCard = ({ event, teamLogo }: { event: any, teamLogo: string }) => (
     </div>
 );
 
-// --- The Detailed Timeline for a selected encounter ---
 const EncounterTimeline = ({ events, encounter }: { events: any[], encounter: any }) => {
-    if (events.length === 0) {
-        return <div className="text-center text-gray-400 py-6">No key events were recorded for this match.</div>;
-    }
     return (
         <div className="relative pt-4 pb-2 px-4">
-            {/* The central spine line */}
             <div className="absolute top-0 left-1/2 w-0.5 h-full bg-gray-700/50" />
-            
             <div className="space-y-4">
                 {events.map((event, index) => {
                     const isHomeEvent = event.team.id === encounter.teams.home.id;
                     return (
                         <div key={index} className="relative flex items-center justify-between">
-                            {/* Left Side (Home) */}
                             <div className="w-5/12">
                                 {isHomeEvent && <EventCard event={event} teamLogo={encounter.teams.home.logo} />}
                             </div>
-
-                            {/* Center Icon on the Spine */}
-                            <div className="z-10">
-                                <EventIcon event={event} />
-                            </div>
-
-                            {/* Right Side (Away) */}
+                            <div className="z-10"><EventIcon event={event} /></div>
                             <div className="w-5/12">
                                 {!isHomeEvent && <EventCard event={event} teamLogo={encounter.teams.away.logo} />}
                             </div>
@@ -85,7 +69,6 @@ const EncounterTimeline = ({ events, encounter }: { events: any[], encounter: an
     );
 };
 
-// --- The Main HeadToHead Component ---
 const HeadToHead = ({ h2hData, teams }: { h2hData?: any[], teams: { home: any, away: any } }) => {
     const [selectedFixtureId, setSelectedFixtureId] = useState<number | null>(null);
     const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
@@ -93,10 +76,9 @@ const HeadToHead = ({ h2hData, teams }: { h2hData?: any[], teams: { home: any, a
 
     const handleEncounterClick = async (fixtureId: number) => {
         if (selectedFixtureId === fixtureId) {
-            setSelectedFixtureId(null); // Toggle off if clicking the same one
+            setSelectedFixtureId(null);
             return;
         }
-
         setIsLoading(true);
         setSelectedFixtureId(fixtureId);
         const events = await getEventsForFixture(fixtureId.toString());
@@ -107,11 +89,21 @@ const HeadToHead = ({ h2hData, teams }: { h2hData?: any[], teams: { home: any, a
     const stats = { homeWins: 0, awayWins: 0, draws: 0 };
     if (h2hData) {
         h2hData.forEach(match => {
-            if(match.teams.home.id === teams.home.id && match.teams.home.winner) stats.homeWins++;
-            else if(match.teams.away.id === teams.home.id && match.teams.away.winner) stats.homeWins++;
-            else if(match.teams.home.id === teams.away.id && match.teams.home.winner) stats.awayWins++;
-            else if(match.teams.away.id === teams.away.id && match.teams.away.winner) stats.awayWins++;
-            else stats.draws++;
+            if (match.teams.home.winner === true) {
+                if (match.teams.home.id === teams.home.id) {
+                    stats.homeWins++;
+                } else {
+                    stats.awayWins++;
+                }
+            } else if (match.teams.away.winner === true) {
+                if (match.teams.away.id === teams.home.id) {
+                    stats.homeWins++;
+                } else {
+                    stats.awayWins++;
+                }
+            } else {
+                stats.draws++;
+            }
         });
     }
 
@@ -129,7 +121,7 @@ const HeadToHead = ({ h2hData, teams }: { h2hData?: any[], teams: { home: any, a
                 {h2hData && h2hData.length > 0 ? (
                     h2hData.map((encounter: any) => (
                         <li key={encounter.fixture.id}>
-                            <button onClick={() => handleEncounterClick(encounter.fixture.id)} className="w-full flex items-center bg-gray-800/30 p-3 rounded-md hover:bg-gray-800/60 transition-colors">
+                            <button onClick={() => handleEncounterClick(encounter.fixture.id)} className="w-full flex items-center bg-gray-800/30 p-3 rounded-t-md hover:bg-gray-800/60 transition-colors">
                                 <div className="w-20 text-xs text-gray-400 text-center">{format(new Date(encounter.fixture.date), 'dd MMM yyyy')}</div>
                                 <div className="flex-grow flex items-center justify-center text-sm font-semibold text-white">
                                     <span className="text-right w-2/5 truncate">{encounter.teams.home.name}</span>
@@ -139,12 +131,22 @@ const HeadToHead = ({ h2hData, teams }: { h2hData?: any[], teams: { home: any, a
                                 <div className="w-40 text-xs text-gray-400 text-right truncate">{encounter.league.name}</div>
                             </button>
 
-                            {/* Conditionally render the timeline below the clicked item */}
                             {selectedFixtureId === encounter.fixture.id && (
                                 <div className="bg-gray-900/50 rounded-b-md">
                                     {isLoading 
-                                        ? <div className="flex justify-center items-center py-10"><Loader2 className="w-8 h-8 animate-spin text-blue-400"/></div>
-                                        : <EncounterTimeline events={timelineEvents} encounter={encounter} />
+                                        ? (
+                                            <div className="flex justify-center items-center py-10">
+                                                <Loader2 className="w-8 h-8 animate-spin text-blue-400"/>
+                                            </div>
+                                        )
+                                        : timelineEvents.length > 0 ? (
+                                            <EncounterTimeline events={timelineEvents} encounter={encounter} />
+                                        ) 
+                                        : (
+                                            <div className="text-center text-gray-400 py-6">
+                                                No key events were recorded for this match.
+                                            </div>
+                                        )
                                     }
                                 </div>
                             )}

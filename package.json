@@ -9,8 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.1",
     "lucide-react": "^0.515.0",
+    "mongodb": "^6.17.0",
+    "mongoose": "^8.16.2",
     "next": "15.3.3",
     "nextjs-toploader": "^3.8.16",
     "react": "^19.0.0",

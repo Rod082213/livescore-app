@@ -4,7 +4,8 @@ import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
 import MatchHeader from '@/components/match/MatchHeader';
-import MatchStatistics from '@/components/match/MatchTimeline';
+import MatchTimeline from '@/components/match/MatchTimeline';
+import MatchStatistics from '@/components/match/MatchStatistics';
 import HeadToHead from '@/components/match/HeadToHead';
 import PredictionForm from '@/components/match/PredictionForm';
 import WelcomeOffer from '@/components/match/WelcomeOffer';
@@ -57,10 +58,14 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           <div className="lg:col-span-2 space-y-6">
+            
+            {/* Render both components sequentially. Each handles its own "no data" state. */}
+            <MatchTimeline events={matchDetails.events} status={matchDetails.status} />
             <MatchStatistics 
               statistics={matchDetails.statistics} 
-              matchStatus={matchDetails.status} 
+              status={matchDetails.status} 
             />
+
             <HeadToHead 
               h2hData={matchDetails.h2h} 
               teams={{ home: matchDetails.homeTeam, away: matchDetails.awayTeam }} 

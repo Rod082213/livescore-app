@@ -40,3 +40,15 @@ body {
 
 /* You can also define custom utility classes or component styles here if needed,
    though Tailwind v4 encourages defining more via @theme and utility composition. */
+
+   .search-results{
+    z-index: 100;
+   }
+
+    .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }

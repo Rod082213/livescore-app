@@ -1,57 +1,36 @@
-import { BarChartHorizontal } from 'lucide-react';
+// src/components/match/MatchTimeline.tsx
+"use client";
 
-const getHomeBarWidth = (home: any, away: any): string => {
-  if (typeof home === 'string' && home.includes('%')) return home;
-  const homeVal = Number(home) || 0;
-  const awayVal = Number(away) || 0;
-  const total = homeVal + awayVal;
-  if (total === 0) return '50%';
-  return `${(homeVal / total) * 100}%`;
-};
+import { ListCollapse, Goal, Circle, Replace, FileText } from 'lucide-react';
 
-// Add matchStatus to the props
-const MatchStatistics = ({ statistics, matchStatus }: { statistics?: Record<string, { home: any; away: any; }>, matchStatus: string }) => {
-  
-  // Check if stats are available
-  const hasStats = statistics && Object.keys(statistics).length > 0;
+const MatchTimeline = ({ events }: { events: any[] }) => {
+  const getEventIcon = (type: string, detail: string) => {
+    if (type === 'Goal') return <Goal size={16} className="text-green-400" />;
+    if (type === 'Card') return <FileText size={16} className={detail.includes('Yellow') ? 'text-yellow-400' : 'text-red-500'} />;
+    if (type === 'subst') return <Replace size={16} className="text-blue-400" />;
+    return <Circle size={16} className="text-gray-500" />;
+  };
 
   return (
     <div className="bg-[#2b3341] rounded-lg p-6">
       <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-        <BarChartHorizontal size={20} /> Match Statistics
+        <ListCollapse size={20} /> Match Timeline
       </h3>
-      
-      {/* If stats exist, display them */}
-      {hasStats ? (
-        <div className="space-y-4">
-          {Object.entries(statistics).map(([type, values]) => (
-            <div key={type}>
-              <div className="flex justify-between items-center mb-1 text-sm font-semibold text-white">
-                <span>{values.home ?? '-'}</span>
-                <span className="text-gray-400">{type}</span>
-                <span>{values.away ?? '-'}</span>
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2 flex">
-                <div 
-                  className="bg-blue-500 h-2 rounded-l-full" 
-                  style={{ width: getHomeBarWidth(values.home, values.away) }}
-                ></div>
-                <div className="bg-gray-500 h-2 rounded-r-full flex-grow"></div>
-              </div>
+      <div className="space-y-4">
+        {events.map((event, index) => (
+          <div key={index} className="flex items-center gap-4 text-sm">
+            <div className="font-bold text-gray-400">{event.time.elapsed}'</div>
+            <div className="flex items-center gap-2">
+              {getEventIcon(event.type, event.detail)}
+              <span className="font-semibold text-white">{event.player.name}</span>
+              <span className="text-gray-400">({event.team.name})</span>
             </div>
-          ))}
-        </div>
-      ) : (
-        // If no stats, show a message based on the match status
-        <div className="text-center text-gray-400 py-8">
-          {matchStatus === 'UPCOMING'
-            ? 'Statistics will be available once the match starts.'
-            : 'No statistics were recorded for this match.'
-          }
-        </div>
-      )}
+            <div className="text-gray-300 ml-auto">{event.detail}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
-export default MatchStatistics;
+export default MatchTimeline;

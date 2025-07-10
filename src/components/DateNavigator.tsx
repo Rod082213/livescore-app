@@ -1,8 +1,13 @@
-// src/components/DateNavigator.tsx
-"use client";
+// src/components/DateNavigator.tsx (CORRECTED)
+
+'use client';
 
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import DatePicker from 'react-datepicker';
+// Make sure this CSS file is imported for the calendar styling
+import "react-datepicker/dist/react-datepicker.css";
+// This is your custom CSS file we will edit next
+import "@/app/datepicker.css"; 
 
 interface DateNavigatorProps {
   selectedDate: Date;
@@ -10,40 +15,47 @@ interface DateNavigatorProps {
 }
 
 const DateNavigator = ({ selectedDate, onDateChange }: DateNavigatorProps) => {
+
   const handlePreviousDay = () => {
-    const prevDay = new Date(selectedDate);
-    prevDay.setDate(selectedDate.getDate() - 1);
-    onDateChange(prevDay);
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() - 1);
+    onDateChange(newDate);
   };
 
   const handleNextDay = () => {
-    const nextDay = new Date(selectedDate);
-    nextDay.setDate(selectedDate.getDate() + 1);
-    onDateChange(nextDay);
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() + 1);
+    onDateChange(newDate);
   };
 
   return (
-    <div className="flex items-center justify-between bg-[#2b3341] p-2 rounded-md mb-4">
-      <button onClick={handlePreviousDay} className="p-2 rounded-md hover:bg-gray-700/50">
-        <ChevronLeft size={20} />
+    <div className="flex items-center justify-between p-3 bg-[#2b3341] rounded-lg mb-4 text-gray-200">
+      <button onClick={handlePreviousDay} className="p-2 rounded-full hover:bg-gray-700 transition-colors">
+        <ChevronLeft className="w-5 h-5" />
       </button>
-      
-       <DatePicker
+
+      {/* This is the DatePicker component that needs fixing */}
+      <DatePicker
         selected={selectedDate}
         onChange={(date: Date) => onDateChange(date)}
-        dateFormat="EEE, d MMM yyyy"
+        dateFormat="E, MMM d, yyyy"
+        className="bg-transparent text-center font-semibold cursor-pointer w-48 focus:outline-none"
+        // --- START OF FIX ---
+        // 1. Render the calendar in a portal at the root of the page to avoid container issues.
+        usePortal
+        // 2. Add a custom class to the pop-up calendar so we can target it with CSS.
+        popperClassName="high-z-index-datepicker"
+        // --- END OF FIX ---
         customInput={
-            <button className="flex items-center gap-2 font-semibold text-white px-4 py-2 rounded-md hover:bg-gray-700/50">
-                <Calendar size={16} />
-                {selectedDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-            </button>
+            <div className="flex items-center gap-2 cursor-pointer">
+                <Calendar className="w-5 h-5 text-gray-400" />
+                <span>{selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
         }
-        // This makes the calendar popup appear nicely below the button
-        popperPlacement="bottom-end"
       />
       
-      <button onClick={handleNextDay} className="p-2 rounded-md hover:bg-gray-700/50">
-        <ChevronRight size={20} />
+      <button onClick={handleNextDay} className="p-2 rounded-full hover:bg-gray-700 transition-colors">
+        <ChevronRight className="w-5 h-5" />
       </button>
     </div>
   );
