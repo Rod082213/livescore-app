@@ -1,85 +1,55 @@
-// src/app/news/[slug]/page.tsx (COMPLETE AND FINAL)
+// src/app/news/[slug]/page.tsx
 
 import { notFound } from "next/navigation";
-import Image from "next/image";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import LeftSidebar from "@/components/LeftSidebar";
-import RightSidebar from "@/components/RightSidebar";
-import BackToNewsButton from "@/components/BackToNewsButton"; // <-- IMPORT THE NEW BUTTON
-import {
-  fetchNewsBySlug,
-  fetchTeamOfTheWeek,
-  fetchLatestNews,
-  fetchTopLeagues,
-} from "@/lib/api";
+import { Metadata } from 'next';
+import { fetchNewsBySlug } from "@/lib/news-api";
+import ArticleBody from "@/components/ArticleBody"; // <-- IMPORT THE NEW COMPONENT
+import BackToNewsButton from "@/components/BackToNewsButton";
 
-export default async function NewsArticlePage({ params }: { params: { slug: string } }) {
-  const [
-    article, 
-    teamOfTheWeek, 
-    latestNews, 
-    topLeagues
-  ] = await Promise.all([
-    fetchNewsBySlug(params.slug),
-    fetchTeamOfTheWeek(),
-    fetchLatestNews(),
-    fetchTopLeagues()
-  ]);
+type Props = { params: { slug: string } };
+
+/**
+ * Generates SEO metadata for the page <head> tag.
+ */
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const article = await fetchNewsBySlug(params.slug);
+
+  if (!article) {
+    return { title: "Article Not Found" };
+  }
+
+  const safeDescription = article.description ? article.description.slice(0, 160) : '';
+
+  return {
+    title: article.title || "Untitled Article",
+    description: safeDescription,
+    keywords: Array.isArray(article.keywords) ? article.keywords.join(', ') : article.keywords,
+    openGraph: {
+      title: article.title || "Untitled Article",
+      description: safeDescription,
+      images: [article.image_url || '/default-news-image.jpg'],
+    },
+  };
+}
+
+/**
+ * This is the Page component. It fetches data and renders the client component.
+ */
+export default async function NewsArticlePage({ params }: Props) {
+  // Fetch the data on the server
+  const article = await fetchNewsBySlug(params.slug);
 
   if (!article) {
     notFound();
   }
 
-  const featuredMatch = null;
-
   return (
-    <div className="bg-[#1d222d] text-gray-200 min-h-screen">
-      <Header />
-      <div className="container mx-auto px-4 py-6">
-        <div className="lg:flex lg:gap-6">
-          <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-6 lg:mb-0 lg:sticky lg:top-4 lg:self-start">
-            <LeftSidebar 
-              teamOfTheWeek={teamOfTheWeek} 
-              latestNews={latestNews} 
-            />
-          </aside>
-          <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
-            <article className="max-w-4xl mx-auto bg-[#2b3341] p-6 rounded-lg">
-              
-              {/* --- THIS IS THE CHANGE --- */}
-              {/* Use the new BackToNewsButton component */}
-              <BackToNewsButton text="Back to All News" />
-
-              <header>
-                <p className="text-sm text-blue-400 font-semibold uppercase">{article.category}</p>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white my-4 leading-tight">{article.title}</h1>
-                <p className="text-gray-400">Published on {article.date}</p>
-              </header>
-              <div className="relative w-full h-64 md:h-96 my-8 rounded-lg overflow-hidden">
-                <Image
-                  src={article.imageUrl}
-                  alt={article.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </div>
-              <div 
-                className="prose prose-invert prose-lg max-w-none text-gray-300"
-                dangerouslySetInnerHTML={{ __html: article.content || "" }} 
-              />
-            </article>
-          </main>
-          <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
-            <RightSidebar 
-              initialTopLeagues={topLeagues} 
-              initialFeaturedMatch={featuredMatch}
-            />
-          </aside>
-        </div>
-      </div>
-      <Footer />
-    </div>
+    // This outer 'article' tag provides a semantic container for the page content.
+    <article className="max-w-7xl mx-auto bg-[#2b3341] p-6 rounded-lg">
+      <BackToNewsButton text="Back to All News" />
+      
+      {/* Pass the server-fetched data to the client component for rendering */}
+      <ArticleBody article={article} />
+    </article>
   );
 }

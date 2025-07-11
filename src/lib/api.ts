@@ -2,27 +2,87 @@
 
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails, Article as IArticle } from "@/data/mockData";
 import { isToday, format, isBefore, startOfDay } from 'date-fns';
-import dbConnect from './mongodb';
-import ArticleModel from '../models/Article';
-import { generateNewsSlug } from './utils';
+import { NewsArticleSummary, NewsArticleDetail } from './types';
 
-async function generateArticleContent(title: string): Promise<string> {
-    const teams = title.match(/(Chelsea|PSG|Inter Milan|San Siro|Real Madrid|Barcelona|Liverpool|Manchester United)/gi) || [];
-    let content = `
-        <p class="lead">In the ever-churning world of football transfers, speculation is a constant companion. The latest wave of rumors has linked several high-profile players to major clubs, but a prominent journalist is urging fans to temper their expectations.</p>
-        <h2>Setting the Record Straight</h2>
-        <p>Speaking on a popular sports broadcast, the journalist directly addressed the recent reports. "While these names are exciting for the fans and make for great headlines, my sources indicate that these are not the primary targets for the club at this moment," he stated emphatically. He explained that the club's strategy is focused on a different set of profiles that align more closely with the coach's tactical vision and the club's financial framework.</p>
-        <h2>Why The Rumors Started</h2>
-        <p>The speculation likely gained traction due to a combination of factors. Player availability, the ongoing search by top clubs to strengthen their squads, and the powerful influence of player agents all contribute to a fertile ground for transfer rumors. "It's a classic pre-season scenario," the journalist added. "Agents are exploring options for their clients, and clubs are being offered dozens of players. It's crucial to distinguish between a preliminary inquiry and a concrete negotiation, and right now, we are very much in the early stages for many of these stories."</p>
-    `;
+// The base URL for the new News API
+const NEWS_API_BASE_URL = "https://news.todaylivescores.com";
 
-    if (teams.length > 0) {
-        content += `
-            <h2>Focus on ${teams.join(' & ')}</h2>
-            <p>The focus for clubs like ${teams.join(', ')} remains on building a cohesive unit for the upcoming season. For many, the priority is to add specific reinforcements in key areas identified by the management, rather than making opportunistic signings based on name recognition alone. The journalist concluded, "Fans should keep an eye on official channels and trusted sources. While the transfer window can be unpredictable, the current strategy is one of precision, not just speculation."</p>
-        `;
+/**
+ * Helper function to generate a summary from HTML content if description is missing.
+ */
+function generateSummaryFromHtml(html: string, length = 150): string {
+  if (!html) return 'No summary available.';
+  // Strip HTML tags and normalize whitespace
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (text.length <= length) return text;
+  return text.substring(0, length) + '...';
+}
+
+/**
+ * Maps a single article from the new API format to our app's internal format.
+ */
+function mapApiArticle(apiArticle: any): NewsArticleSummary {
+    return {
+        _id: apiArticle.id.toString(),
+        title: apiArticle.title,
+        slug: apiArticle.slug,
+        imageUrl: apiArticle.image_url,
+        // The new API sometimes has null description, so we generate a fallback from the full article
+        summary: apiArticle.description || generateSummaryFromHtml(apiArticle.full_article),
+        publishedAt: apiArticle.pubDate,
+    };
+}
+
+/**
+ * Corresponds to the API call in NewsList.vue / src/app/news/page.tsx
+ */
+export async function fetchNewsList(): Promise<NewsArticleSummary[]> {
+  try {
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news`, { next: { revalidate: 3600 } });
+    if (!res.ok) {
+      throw new Error('Failed to fetch news list');
     }
-    return Promise.resolve(content);
+    const apiResponse = await res.json();
+    
+    // FIX: The articles are in the `data` property of the response.
+    if (!apiResponse || !Array.isArray(apiResponse.data)) {
+        console.error("News API response is not in the expected format:", apiResponse);
+        return [];
+    }
+
+    // FIX: Map each article from the API format to our internal format.
+    return apiResponse.data.map(mapApiArticle);
+
+  } catch (error) {
+    console.error('API Error (fetchNewsList):', error);
+    return [];
+  }
+}
+
+/**
+ * Corresponds to the API call in NewsDetail.vue / src/app/news/[slug]/page.tsx
+ */
+export async function fetchNewsBySlug(slug: string): Promise<NewsArticleDetail | null> {
+  try {
+    // It's likely the slug endpoint returns a single article object directly.
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news/slug/${slug}`, { next: { revalidate: 3600 } });
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error(`Failed to fetch article: ${slug}`);
+    }
+    const apiArticle = await res.json();
+    
+    // FIX: Map the single detailed article to our internal format.
+    // The detail object has the same base fields plus 'full_article' and 'keywords'.
+    return {
+        ...mapApiArticle(apiArticle),
+        content: apiArticle.full_article,
+        keywords: apiArticle.keywords || [],
+    };
+  } catch (error) {
+    console.error(`API Error (fetchNewsBySlug: ${slug}):`, error);
+    return null;
+  }
 }
 
 function mapStatus(status: any): { status: Match['status'], time?: string } {
@@ -213,99 +273,14 @@ export async function fetchTeamOfTheWeek(leagueId: string = "39", season: string
     } catch (error) { return []; }
 }
 
-async function fetchFromNewsApiAndSave() {
-  await dbConnect();
-  const NEWS_API_KEY = process.env.NEWS_API_KEY;
-  if (!NEWS_API_KEY) return;
-  const newsApiUrl = `https://newsdata.io/api/1/news?apikey=${NEWS_API_KEY}&category=sports&language=en&size=10`;
-  try {
-    const response = await fetch(newsApiUrl);
-    if (!response.ok) throw new Error('Failed to fetch from newsdata.io');
-    const data = await response.json();
-    if (data.status !== 'success' || !data.results) return;
 
-    const articlesToSave = data.results.map((apiArticle: any) => ({
-      apiId: apiArticle.article_id,
-      slug: generateNewsSlug(apiArticle.title),
-      category: "SPORTS",
-      title: apiArticle.title,
-      imageUrl: apiArticle.image_url || '/placeholder-news.png',
-      publishedAt: new Date(apiArticle.pubDate),
-    }));
 
-    await ArticleModel.insertMany(articlesToSave, { ordered: false });
-  } catch (error: any) {
-    if (error.code !== 11000) {
-        console.error("Error fetching/saving news:", error);
-    }
-  }
-}
 
-export async function fetchLatestNews(): Promise<(IArticle & { slug: string })[]> {
-  await dbConnect();
-  try {
-    const latestArticle = await ArticleModel.findOne().sort({ createdAt: -1 });
-    let needsFetch = true;
-    if (latestArticle) {
-        const today = startOfDay(new Date());
-        if (!isBefore(startOfDay(latestArticle.createdAt), today)) {
-            needsFetch = false;
-        }
-    }
-    if (needsFetch) {
-        await fetchFromNewsApiAndSave();
-    }
-    const articlesFromDb = await ArticleModel.find().sort({ publishedAt: -1 }).limit(3);
-    return articlesFromDb.map(doc => ({
-      id: doc.apiId,
-      slug: doc.slug,
-      category: doc.category,
-      title: doc.title,
-      imageUrl: doc.imageUrl,
-      date: format(new Date(doc.publishedAt), 'MMM d, yyyy'),
-    }));
-  } catch (error) {
-    return [];
-  }
-}
+  
 
-export async function fetchAllNews(): Promise<(IArticle & { snippet: string, slug: string })[]> {
-  await dbConnect();
-  try {
-    const articlesFromDb = await ArticleModel.find().sort({ publishedAt: -1 });
-    return articlesFromDb.map(doc => ({
-      id: doc.apiId,
-      slug: doc.slug,
-      category: doc.category,
-      title: doc.title,
-      imageUrl: doc.imageUrl,
-      date: format(new Date(doc.publishedAt), 'MMM d, yyyy'),
-      snippet: "Click to read the full story about this breaking news in the world of sports..."
-    }));
-  } catch (error) {
-    return [];
-  }
-}
 
-export async function fetchNewsBySlug(slug: string): Promise<(IArticle & { content?: string }) | null> {
-  await dbConnect();
-  try {
-    const articleDoc = await ArticleModel.findOne({ slug: slug });
-    if (!articleDoc) return null;
-    const generatedContent = await generateArticleContent(articleDoc.title);
-    return {
-      id: articleDoc.apiId,
-      slug: articleDoc.slug,
-      category: articleDoc.category,
-      title: articleDoc.title,
-      imageUrl: articleDoc.imageUrl,
-      date: format(new Date(articleDoc.publishedAt), 'MMM d, yyyy'),
-      content: generatedContent
-    };
-  } catch (error) {
-    return null;
-  }
-}
+
+
 
 export async function fetchMatchDetailsById(id: string): Promise<MatchDetails | null> {
     if (!API_KEY) {

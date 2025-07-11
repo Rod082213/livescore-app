@@ -34,7 +34,7 @@
 
 /* 4) Any global overrides you want */
 body {
-  background-color: var(--color-bets10-dark); /* #121212 (very dark) */
+  background-color: #1D222D; /* #121212 (very dark) */
   color: var(--color-bets10-light-gray);    /* #f5f5f5 (very light) */
 }
 

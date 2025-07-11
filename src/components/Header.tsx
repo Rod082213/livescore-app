@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useRef, ReactNode, useEffect } from 'react';
+import Link from 'next/link'; // Import Link
 import { Search, Star, HelpCircle, Settings, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,6 +11,17 @@ interface HeaderProps {
   onSearchToggle: () => void;
   children: ReactNode;
 }
+
+// Extracted Logo component for better structure and functionality
+const Logo = () => (
+  <Link href="/" className="flex items-center space-x-2" aria-label="TLiveScores Home">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11.0002 2C11.0002 2 11.0002 8.5 14.5002 12C18.0002 15.5 11.5002 22 11.5002 22" stroke="#4a90e2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M13.0001 2C13.0001 2 13.0001 8.5 9.50006 12C6.00006 15.5 12.5 22 12.5 22" stroke="#4a90e2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+    <span className="text-xl font-bold text-white">TLiveScores</span>
+  </Link>
+);
 
 const Header = ({ onSearchToggle, children }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,13 +47,7 @@ const Header = ({ onSearchToggle, children }: HeaderProps) => {
     <header ref={headerRef} className="bg-[#1d222d] border-b border-gray-700 sticky top-0 z-40">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-2">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11.0002 2C11.0002 2 11.0002 8.5 14.5002 12C18.0002 15.5 11.5002 22 11.5002 22" stroke="#4a90e2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M13.0001 2C13.0001 2 13.0001 8.5 9.50006 12C6.00006 15.5 12.5 22 12.5 22" stroke="#4a90e2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="text-xl font-bold text-white">TLiveScores</span>
-          </div>
+          <Logo /> {/* Use the new Logo component */}
 
           <div className="hidden md:block flex-grow max-w-lg mx-8">
             {children}
