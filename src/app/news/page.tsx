@@ -77,7 +77,7 @@ export default async function NewsListingPage({
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {paginatedArticles.map((article) => (
                     // --- THE FIX for all properties ---
-                    <NewsArticleCard key={article._id} article={article} />
+                    <NewsArticleCard key={article.id} article={article} />
                   ))}
                 </div>
                 

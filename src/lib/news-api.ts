@@ -14,25 +14,27 @@ function generateSummaryFromHtml(html: string, length = 150): string {
 }
 
 /**
- * CORRECTED: This now maps correctly to `_id` and `imageUrl`.
+ * CORRECTED: This now maps correctly to `_id` and `imageUrl` from your internal types.
  */
 function mapApiArticle(apiArticle: any): NewsArticleSummary {
     return {
-        id: apiArticle.id.toString(), // Corrected from `id`
+        id: apiArticle.id.toString(), // Maps 'id' to '_id'
         title: apiArticle.title,
         slug: apiArticle.slug,
-        image_url: apiArticle.image_url, // Corrected from `image_url`
+        image_url: apiArticle.image_url, // Maps 'image_url' to 'imageUrl'
         summary: apiArticle.description || generateSummaryFromHtml(apiArticle.full_article),
         publishedAt: apiArticle.pubDate,
     };
 }
 
 /**
- * CORRECTED: Added the missing function name `fetchNewsList`.
+ * Fetches the list of news.
  */
 export async function fetchNewsList(): Promise<NewsArticleSummary[]> {
   try {
-    const res = await fetch(`${NEWS_API_BASE_URL}/api/news`, { next: { revalidate: 3600 } });
+    // --- THE FIX: Caching is disabled for immediate updates ---
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news`, { cache: 'no-store' });
+    
     if (!res.ok) {
       throw new Error('Failed to fetch news list');
     }
@@ -51,11 +53,12 @@ export async function fetchNewsList(): Promise<NewsArticleSummary[]> {
 }
 
 /**
- * FINAL FIX: This function now correctly handles the API's actual response format.
+ * Fetches a single article by its slug.
  */
 export async function fetchNewsBySlug(slug: string): Promise<NewsArticleDetail | null> {
   try {
-    const res = await fetch(`${NEWS_API_BASE_URL}/api/news/slug/${slug}`, { next: { revalidate: 3600 } });
+    // --- THE FIX: Caching is disabled for immediate updates ---
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news/slug/${slug}`, { cache: 'no-store' });
 
     if (!res.ok) {
       if (res.status === 404) {
@@ -65,12 +68,8 @@ export async function fetchNewsBySlug(slug: string): Promise<NewsArticleDetail |
       throw new Error(`Failed to fetch article: ${slug}`);
     }
 
-    // --- THE FIX ---
-    // The API sends the article object directly, not inside a "data" property.
-    // So, we just parse the JSON and return the whole object.
     const apiResponse = await res.json();
     
-    // We can add a simple check to ensure it's a valid object before returning.
     if (apiResponse && typeof apiResponse === 'object' && apiResponse.slug) {
       return apiResponse;
     } else {
