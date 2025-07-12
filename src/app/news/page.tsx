@@ -15,6 +15,8 @@ import { fetchNewsList } from "@/lib/news-api";
 import { fetchTeamOfTheWeek, fetchTopLeagues } from "@/lib/api";
 import { NewsArticleSummary } from '@/lib/types';
 
+// --- THE FIX for "Invalid Date" ---
+// A robust helper function to safely format dates.
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Date not available';
   const date = new Date(dateString);
@@ -42,8 +44,9 @@ export default async function NewsListingPage({
     fetchTopLeagues(),
   ]);
 
-  const latestNewsForSidebar = allNews.slice(0, 5);
+  const latestNewsForSidebar = allNews.slice(0, 5); // Slice to a reasonable number for the sidebar
 
+  // Pagination Logic
   const page = searchParams['page'] ?? '1';
   const perPage = 6;
   const start = (Number(page) - 1) * perPage;
@@ -73,10 +76,8 @@ export default async function NewsListingPage({
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {paginatedArticles.map((article) => (
-                    // --- THIS IS THE FIX ---
-                    // Use a reliable key. Try `article.id` first, and if it's
-                    // missing, fall back to the unique `article.slug`.
-                    <NewsArticleCard key={article.id || article.slug} article={article} />
+                    // --- THE FIX for all properties ---
+                    <NewsArticleCard key={article._id} article={article} />
                   ))}
                 </div>
                 
@@ -100,7 +101,6 @@ export default async function NewsListingPage({
               initialTopLeagues={topLeagues} 
               initialFeaturedMatch={null}
             />
-        
           </aside>
         </div>
       </div>
@@ -110,10 +110,13 @@ export default async function NewsListingPage({
   );
 }
 
+// --- THIS ENTIRE COMPONENT HAS BEEN CORRECTED ---
 const NewsArticleCard = ({ article }: { article: NewsArticleSummary }) => (
+  // FIX: Use `_id` for the key.
   <Link href={`/news/${article.slug}`} className="block group">
     <div className="bg-[#2b3341] rounded-lg overflow-hidden h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1">
       <div className="relative w-full h-48">
+        {/* FIX: Use `imageUrl`. */}
         {article.image_url ? (
           <Image src={article.image_url} alt={article.title} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-300" />
         ) : (
@@ -122,9 +125,11 @@ const NewsArticleCard = ({ article }: { article: NewsArticleSummary }) => (
       </div>
       <div className="p-4 md:p-5 flex flex-col flex-grow">
         <h2 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">{article.title}</h2>
+        {/* FIX: Use `summary`. It is guaranteed to exist by the API logic. */}
         <p className="text-gray-400 text-sm mb-4 flex-grow">{article.summary}</p>
         <p className="text-xs text-gray-500 mt-auto pt-3 border-t border-gray-700/50">
           <ClientOnly>
+            {/* FIX: Use `publishedAt` and the robust `formatDate` function. */}
             {formatDate(article.publishedAt)}
           </ClientOnly>
         </p>
