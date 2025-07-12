@@ -5,6 +5,7 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LeftSidebar from "@/components/LeftSidebar";
+import SportsNav from "@/components/SportsNav";
 import RightSidebar from "@/components/RightSidebar";
 import BackToNewsButton from "@/components/BackToNewsButton"; // <-- IMPORT THE NEW BUTTON
 import {
@@ -36,6 +37,8 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
+      <SportsNav />
+
       <div className="container mx-auto px-4 py-6">
         <div className="lg:flex lg:gap-6">
           <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-6 lg:mb-0 lg:sticky lg:top-4 lg:self-start">
@@ -53,7 +56,7 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
 
               <header>
                 <p className="text-sm text-blue-400 font-semibold uppercase">{article.category}</p>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white my-4 leading-tight">{article.title}</h1>
+                <h2 className="text-3xl lg:text-4xl font-bold text-white my-4 leading-tight">{article.title}</h2>
                 <p className="text-gray-400">Published on {article.date}</p>
               </header>
               <div className="relative w-full h-64 md:h-96 my-8 rounded-lg overflow-hidden">

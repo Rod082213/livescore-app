@@ -26,12 +26,12 @@ const MatchHeader = ({ match }: { match: any }) => {
         <div className="flex items-center justify-around w-full max-w-3xl mb-6">
           <div className="flex flex-col items-center gap-4 text-center">
             <Image src={match.homeTeam.logo} alt={match.homeTeam.name} width={96} height={96} />
-            <h1 className="text-2xl font-bold">{match.homeTeam.name}</h1>
+            <h2 className="text-2xl font-bold">{match.homeTeam.name}</h2>
           </div>
           <div className="text-6xl font-bold">{match.score}</div>
           <div className="flex flex-col items-center gap-4 text-center">
             <Image src={match.awayTeam.logo} alt={match.awayTeam.name} width={96} height={96} />
-            <h1 className="text-2xl font-bold">{match.awayTeam.name}</h1>
+            <h2 className="text-2xl font-bold">{match.awayTeam.name}</h2>
           </div>
         </div>
         

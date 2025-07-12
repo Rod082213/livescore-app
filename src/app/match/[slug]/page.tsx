@@ -9,6 +9,7 @@ import MatchStatistics from '@/components/match/MatchStatistics';
 import HeadToHead from '@/components/match/HeadToHead';
 import PredictionForm from '@/components/match/PredictionForm';
 import WelcomeOffer from '@/components/match/WelcomeOffer';
+import MatchDescription from '@/components/match/MatchDescription';
 import { fetchMatchDetailsById } from '@/lib/api'; 
 import Link from 'next/link';
 
@@ -78,7 +79,9 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
               form={matchDetails.form}
               teams={{ home: matchDetails.homeTeam, away: matchDetails.awayTeam }} 
             />
+            <MatchDescription />
             <WelcomeOffer />
+            
           </div>
           
         </div>

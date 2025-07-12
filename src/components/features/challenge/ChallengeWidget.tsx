@@ -17,7 +17,7 @@ export function ChallengeWidget() {
     <Link href="/challenge" className="block">
       <div className="flex items-center justify-between rounded-lg bg-blue-600 p-4 text-white shadow-lg transition-transform hover:scale-105">
         <div>
-          <h3 className="font-bold text-lg">{challengeData.title}</h3>
+          <h2 className="font-bold text-lg">{challengeData.title}</h2>
           <p className="text-sm opacity-90">
             Time left: {days}d {hours}h
           </p>

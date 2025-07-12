@@ -1,4 +1,7 @@
 // src/components/TeamOfTheWeek.tsx
+
+// 1. Make sure you have this import at the top
+import Link from 'next/link';
 import { Player } from '@/data/mockData';
 import Image from 'next/image';
 
@@ -15,7 +18,6 @@ const PlayerMarker = ({ player }: { player: Player }) => (
 );
 
 const TeamOfTheWeek = ({ players }: { players: Player[] }) => {
-  // Defensive check to ensure we have data before rendering
   if (!Array.isArray(players) || players.length === 0) {
     return (
         <div className="bg-[#2b3341] rounded-lg p-4">
@@ -29,13 +31,15 @@ const TeamOfTheWeek = ({ players }: { players: Player[] }) => {
 
   return (
     <div className="bg-[#2b3341] rounded-lg p-4">
-      <h2 className="text-lg font-bold text-white mb-4">Top Players</h2>
+      <h2 className="text-lg font-bold text-white mb-4">Top Teams</h2>
       <div 
         className="relative w-full aspect-[4/3] bg-cover bg-center rounded-md"
         style={{backgroundImage: "url('/football-pitch.svg')"}}
       >
         {players.map(player => <PlayerMarker key={player.name} player={player} />)}
       </div>
+
+     
     </div>
   );
 };

@@ -5,7 +5,7 @@ import NextTopLoader from 'nextjs-toploader'; // 1. Import the component
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'LiveStats',
+  title: 'TodayLiveScores',
   description: 'Your go-to for live sports scores and statistics.',
 };
 

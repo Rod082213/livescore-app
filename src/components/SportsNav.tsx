@@ -18,6 +18,7 @@ const SportsNav = ({ liveMatchCount }: SportsNavProps) => {
     { name: 'Basketball', href: '/basketball', icon: <Dribbble size={18} /> },
     { name: 'Tennis', href: '/tennis', icon: <Trophy size={18} /> },
     { name: 'News', href: '/news', icon: <Newspaper size={18} /> },
+   
     // You can add more items here to test the scrolling
     // { name: 'Ice Hockey', href: '/hockey', icon: <div className="w-4 h-4" /> },
     // { name: 'Volleyball', href: '/volleyball', icon: <div className="w-4 h-4" /> },
@@ -25,7 +26,7 @@ const SportsNav = ({ liveMatchCount }: SportsNavProps) => {
   ];
 
   return (
-    <nav className="bg-[#1d222d] border-b border-gray-700">
+    <nav className="bg-[#1d222d] border-b border-gray-700 ">
       <div className="container mx-auto px-4">
         <div className="flex overflow-x-auto whitespace-nowrap scrollbar-hide">
           <div className="flex items-center space-x-6">

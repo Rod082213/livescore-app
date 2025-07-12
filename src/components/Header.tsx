@@ -40,7 +40,7 @@ const Header = ({ onSearchToggle, children }: HeaderProps) => {
               <path d="M11.0002 2C11.0002 2 11.0002 8.5 14.5002 12C18.0002 15.5 11.5002 22 11.5002 22" stroke="#4a90e2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M13.0001 2C13.0001 2 13.0001 8.5 9.50006 12C6.00006 15.5 12.5 22 12.5 22" stroke="#4a90e2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span className="text-xl font-bold text-white">TLiveScores</span>
+            <a href='/'><h1 className="text-xl font-bold text-white">TLiveScores</h1></a>
           </div>
 
           <div className="hidden md:block flex-grow max-w-lg mx-8">

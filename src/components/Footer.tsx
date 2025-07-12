@@ -5,7 +5,7 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="font-bold text-white mb-4">Company</h3>
+            <h2 className="font-bold text-white mb-4">Company</h2>
             <ul>
               <li><a href="#" className="text-gray-400 hover:text-white text-sm">About Us</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white text-sm">Careers</a></li>
@@ -13,7 +13,7 @@ const Footer = () => {
             </ul>
           </div>
           <div>
-            <h3 className="font-bold text-white mb-4">Legal</h3>
+            <h2 className="font-bold text-white mb-4">Legal</h2>
             <ul>
               <li><a href="#" className="text-gray-400 hover:text-white text-sm">Terms of Use</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white text-sm">Privacy Policy</a></li>
@@ -21,14 +21,14 @@ const Footer = () => {
             </ul>
           </div>
           <div>
-            <h3 className="font-bold text-white mb-4">Support</h3>
+            <h2 className="font-bold text-white mb-4">Support</h2>
             <ul>
               <li><a href="#" className="text-gray-400 hover:text-white text-sm">Contact Us</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white text-sm">FAQs</a></li>
             </ul>
           </div>
           <div>
-            <h3 className="font-bold text-white mb-4">Follow Us</h3>
+            <h2 className="font-bold text-white mb-4">Follow Us</h2>
             <div className="flex space-x-4">
               {/* Add social icons here if you want */}
             </div>

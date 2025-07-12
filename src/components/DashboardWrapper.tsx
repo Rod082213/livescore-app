@@ -53,11 +53,10 @@ export default function DashboardWrapper({
   const [searchResults, setSearchResults] = useState<{leagues: any[], teams: any[]}>({leagues: [], teams: []});
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState<'all' | 'live' | 'finished' | 'upcoming'>('all');
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -91,6 +90,7 @@ export default function DashboardWrapper({
   useEffect(() => {
     const isViewingToday = isToday(selectedDate);
     let pollingInterval: NodeJS.Timeout | null = null;
+
     if (!isViewingToday) {
       const loadHistoricData = async () => {
         setIsLoading(true);
@@ -110,9 +110,12 @@ export default function DashboardWrapper({
         } catch (error) {}
         setIsLoading(false);
       };
-      if (matches !== initialMatches) {
+      
+      const isInitialRender = JSON.stringify(matches) === JSON.stringify(initialMatches);
+      if (!isInitialRender) {
         loadDashboardData();
       }
+
       pollingInterval = setInterval(async () => {
         try {
           const response = await fetch('/api/dashboard');
@@ -123,7 +126,7 @@ export default function DashboardWrapper({
       }, 15000);
     }
     return () => { if (pollingInterval) clearInterval(pollingInterval); };
-  }, [selectedDate, initialMatches]);
+  }, [selectedDate]);
 
   const liveMatchCount = (matches || []).reduce((count, group) => {
     return count + group.matches.filter(match => match.status === 'LIVE' || match.status === 'HT').length;
@@ -155,13 +158,13 @@ export default function DashboardWrapper({
       })).filter(group => group.matches.length > 0);
   }, [matches, query, activeTab]);
   
-  const handleSelect = () => {
-    setQuery('');
+  const handleSelectAndClose = (itemName: string) => {
+    setQuery(itemName);
     setIsSearchFocused(false);
     setIsSearchModalOpen(false);
   };
-
-  const desktopSearch = (
+  
+  const searchBarComponent = (
     <div 
         ref={searchContainerRef}
         className="w-full relative"
@@ -181,21 +184,25 @@ export default function DashboardWrapper({
           <SearchResults 
             results={searchResults}
             isLoading={isSearchLoading}
-            onSelectTeam={handleSelect}
-            onSelectLeague={handleSelect}
+            onSelectTeam={(team) => handleSelectAndClose(team.name)}
+            onSelectLeague={(league) => handleSelectAndClose(league.name)}
           />
         )}
     </div>
   );
+ 
 
   return (
     <>
       <Header onSearchToggle={() => setIsSearchModalOpen(true)}>
-        {desktopSearch}
+        {searchBarComponent}
       </Header>
 
-      <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)}>
-        {desktopSearch}
+      <SearchModal 
+        isOpen={isSearchModalOpen} 
+        onClose={() => setIsSearchModalOpen(false)}
+      >
+        {searchBarComponent}
       </SearchModal>
 
       <SportsNav liveMatchCount={liveMatchCount} />
@@ -205,7 +212,7 @@ export default function DashboardWrapper({
             <LeftSidebar teamOfTheWeek={initialTeamOfTheWeek} latestNews={initialLatestNews} />
           </aside>
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
-            {query.length >= 3 && (
+            {(query.length >= 3) && (
                 <div className="bg-gray-800 p-3 rounded-lg mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <span className="text-gray-400 text-sm">Showing results for:</span>

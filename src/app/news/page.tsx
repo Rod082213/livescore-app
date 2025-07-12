@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LeftSidebar from "@/components/LeftSidebar";
-import RightSidebar from "@/components/RightSidebar";
+
+import Newsbar from "@/components/NewsSidebar";
 import SportsNav from "@/components/SportsNav";
 import {
   fetchAllNews,
@@ -17,8 +17,7 @@ import {
 export default async function NewsListingPage() {
   const [
     allNews, 
-    teamOfTheWeek, 
-    latestNewsForSidebar,
+   
     topLeagues
   ] = await Promise.all([
     fetchAllNews(),
@@ -33,15 +32,10 @@ export default async function NewsListingPage() {
       <SportsNav />
       <div className="container mx-auto px-4 py-6">
         <div className="lg:flex lg:gap-6">
-          <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-6 lg:mb-0 lg:sticky lg:top-4 lg:self-start">
-            <LeftSidebar 
-              teamOfTheWeek={teamOfTheWeek} 
-              latestNews={latestNewsForSidebar} 
-            />
-          </aside>
+         
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
             <div className="bg-[#2b3341] p-4 rounded-lg">
-                <h1 className="text-2xl font-bold text-white mb-6">All Sports News</h1>
+                <h2 className="text-2xl font-bold text-white mb-6">All Sports News</h2>
                 <div className="space-y-6">
                     {allNews.length > 0 ? (
                         allNews.map((article) => (
@@ -73,10 +67,11 @@ export default async function NewsListingPage() {
             </div>
           </main>
           <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
-            <RightSidebar 
+            <Newsbar 
               initialTopLeagues={topLeagues} 
               initialFeaturedMatch={null}
             />
+        
           </aside>
         </div>
       </div>

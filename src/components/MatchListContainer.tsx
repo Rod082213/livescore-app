@@ -1,12 +1,11 @@
-// src/components/MatchListContainer.tsx
-
 "use client";
 
-import { LeagueGroup } from "@/data/mockData";
+import { useState, useMemo, useEffect } from "react";
+import { LeagueGroup, Match } from "@/data/mockData";
 import Image from "next/image";
 import MatchRow from "./MatchRow";
 import DateNavigator from "./DateNavigator";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface MatchListContainerProps {
   matches: LeagueGroup[];
@@ -27,6 +26,35 @@ const MatchListContainer = ({
     setActiveTab,
     liveMatchCount
 }: MatchListContainerProps) => {
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const MATCHES_PER_PAGE = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [matches, activeTab, selectedDate]);
+
+  const { paginatedMatches, totalPages } = useMemo(() => {
+    const allMatches = matches.flatMap(group => 
+        group.matches.map(match => ({ ...match, leagueInfo: group }))
+    );
+    
+    const totalMatches = allMatches.length;
+    const totalPages = Math.ceil(totalMatches / MATCHES_PER_PAGE);
+    const startIndex = (currentPage - 1) * MATCHES_PER_PAGE;
+    const endIndex = startIndex + MATCHES_PER_PAGE;
+    const paginatedMatches = allMatches.slice(startIndex, endIndex);
+
+    return { paginatedMatches, totalPages };
+  }, [matches, currentPage]);
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
 
   return (
     <main className="flex-grow">
@@ -57,22 +85,51 @@ const MatchListContainer = ({
             <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
         </div>
       ) : matches.length > 0 ? (
-        <div className="space-y-6">
-          {matches.map(group => (
-            <div key={group.leagueName}>
-              <div className="flex items-center gap-3 p-3">
-                  <Image src={group.leagueLogo} alt={group.leagueName} width={24} height={24} />
-                  <div>
-                    <p className="text-gray-400 text-xs">{group.countryName}</p>
-                    <p className="text-white font-semibold text-sm">{group.leagueName}</p>
-                  </div>
-              </div>
-              <div className="space-y-2">
-                {group.matches.map(match => <MatchRow key={match.id} match={match} />)}
-              </div>
+        <>
+          <div className="space-y-2">
+            {paginatedMatches.map((match, index, array) => {
+              const showHeader = index === 0 || match.leagueInfo.leagueName !== array[index - 1].leagueInfo.leagueName;
+              return (
+                <div key={match.id}>
+                  {showHeader && (
+                    <div className="flex items-center gap-3 p-3 mt-4">
+                      <Image src={match.leagueInfo.leagueLogo} alt={match.leagueInfo.leagueName} width={24} height={24} />
+                      <div>
+                        <p className="text-gray-400 text-xs">{match.leagueInfo.countryName}</p>
+                        <p className="text-white font-semibold text-sm">{match.leagueInfo.leagueName}</p>
+                      </div>
+                    </div>
+                  )}
+                  <MatchRow match={match} />
+                </div>
+              )
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowLeft size={16} />
+                Previous
+              </button>
+              <span className="font-semibold text-white">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+                <ArrowRight size={16} />
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-16 text-gray-400 bg-[#2b3341] rounded-lg">
           <h3 className="text-xl font-semibold">No Matches Found</h3>
