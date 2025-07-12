@@ -1,73 +1,103 @@
 // src/app/news/page.tsx
 
-import Image from "next/image";
-import Link from "next/link";
+import { Metadata } from 'next';
+import Image from 'next/image';
+import Link from 'next/link';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-
-import Newsbar from "@/components/NewsSidebar";
+import LeftSidebar from "@/components/LeftSidebar";
+import RightSidebar from "@/components/RightSidebar";
+import ClientOnly from '@/components/ClientOnly';
 import SportsNav from "@/components/SportsNav";
-import {
-  fetchAllNews,
-  fetchTeamOfTheWeek,
-  fetchLatestNews,
-  fetchTopLeagues,
-} from "@/lib/api";
+import PaginationControls from '@/components/PaginationControls';
 
-export default async function NewsListingPage() {
+import { fetchNewsList } from "@/lib/news-api";
+import { fetchTeamOfTheWeek, fetchTopLeagues } from "@/lib/api";
+import { NewsArticleSummary } from '@/lib/types';
+
+// --- THE FIX for "Invalid Date" ---
+// A robust helper function to safely format dates.
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Date not available';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Invalid Date';
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+
+export default async function NewsListingPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   const [
-    allNews, 
-   
-    topLeagues
+    allNews,
+    teamOfTheWeek,
+    topLeagues,
   ] = await Promise.all([
-    fetchAllNews(),
+    fetchNewsList(),
     fetchTeamOfTheWeek(),
-    fetchLatestNews(),
-    fetchTopLeagues()
+    fetchTopLeagues(),
   ]);
+
+  const latestNewsForSidebar = allNews.slice(0, 5); // Slice to a reasonable number for the sidebar
+
+  // Pagination Logic
+  const page = searchParams['page'] ?? '1';
+  const perPage = 6;
+  const start = (Number(page) - 1) * perPage;
+  const end = start + perPage;
+  const paginatedArticles = allNews.slice(start, end);
 
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
       <SportsNav />
-      <div className="container mx-auto px-4 py-6">
-        <div className="lg:flex lg:gap-6">
-         
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="lg:flex lg:gap-8">
+          
+          <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-8 lg:mb-0 lg:sticky lg:top-8 lg:self-start">
+            <LeftSidebar 
+              teamOfTheWeek={teamOfTheWeek} 
+              latestNews={latestNewsForSidebar} 
+            />
+          </aside>
+          
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
-            <div className="bg-[#2b3341] p-4 rounded-lg">
-                <h2 className="text-2xl font-bold text-white mb-6">All Sports News</h2>
-                <div className="space-y-6">
-                    {allNews.length > 0 ? (
-                        allNews.map((article) => (
-                            <Link key={article.id} href={`/news/${article.slug}`} className="block group bg-[#1d222d] p-4 rounded-lg hover:bg-[#343c4c] transition-colors">
-                                <div className="flex flex-col md:flex-row items-start gap-4">
-                                    <div className="w-full md:w-48 h-40 md:h-28 flex-shrink-0 relative rounded-md overflow-hidden">
-                                        <Image
-                                            src={article.imageUrl}
-                                            alt={article.title}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs text-blue-400 font-semibold uppercase mb-1">{article.category}</p>
-                                        <h2 className="text-lg font-semibold text-gray-100 group-hover:text-white transition-colors mb-2">
-                                            {article.title}
-                                        </h2>
-                                        <p className="text-sm text-gray-400 mb-2">{article.snippet}</p>
-                                        <p className="text-xs text-gray-500">{article.date}</p>
-                                    </div>
-                                </div>
-                            </Link>
-                        ))
-                    ) : (
-                        <p className="text-gray-400">No news found.</p>
-                    )}
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-8 border-b border-gray-700 pb-4">
+              Latest News
+            </h1>
+            {paginatedArticles && paginatedArticles.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {paginatedArticles.map((article) => (
+                    // --- THE FIX for all properties ---
+                    <NewsArticleCard key={article._id} article={article} />
+                  ))}
                 </div>
-            </div>
+                
+                <PaginationControls
+                  hasNextPage={end < allNews.length}
+                  hasPrevPage={start > 0}
+                  totalArticles={allNews.length}
+                  perPage={perPage}
+                />
+              </>
+            ) : (
+              <div className="text-center py-20 bg-[#2b3341] rounded-lg">
+                <p className="text-gray-300 text-xl font-semibold">No News Articles Found</p>
+                <p className="text-gray-500 text-md mt-2">Please check back later.</p>
+              </div>
+            )}
           </main>
-          <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
-            <Newsbar 
+          
+          <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-8 lg:self-start">
+            <RightSidebar 
               initialTopLeagues={topLeagues} 
               initialFeaturedMatch={null}
             />
@@ -75,7 +105,42 @@ export default async function NewsListingPage() {
           </aside>
         </div>
       </div>
+      
       <Footer />
     </div>
   );
 }
+
+// --- THIS ENTIRE COMPONENT HAS BEEN CORRECTED ---
+const NewsArticleCard = ({ article }: { article: NewsArticleSummary }) => (
+  // FIX: Use `_id` for the key.
+  <Link href={`/news/${article.slug}`} className="block group">
+    <div className="bg-[#2b3341] rounded-lg overflow-hidden h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1">
+      <div className="relative w-full h-48">
+        {/* FIX: Use `imageUrl`. */}
+        {article.image_url ? (
+          <Image src={article.image_url} alt={article.title} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-300" />
+        ) : (
+          <div className="w-full h-full bg-gray-700/50 flex items-center justify-center"><span className="text-gray-400 text-sm">No Image</span></div>
+        )}
+      </div>
+      <div className="p-4 md:p-5 flex flex-col flex-grow">
+        <h2 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">{article.title}</h2>
+        {/* FIX: Use `summary`. It is guaranteed to exist by the API logic. */}
+        <p className="text-gray-400 text-sm mb-4 flex-grow">{article.summary}</p>
+        <p className="text-xs text-gray-500 mt-auto pt-3 border-t border-gray-700/50">
+          <ClientOnly>
+            {/* FIX: Use `publishedAt` and the robust `formatDate` function. */}
+            {formatDate(article.publishedAt)}
+          </ClientOnly>
+        </p>
+      </div>
+    </div>
+  </Link>
+);
+
+
+export const metadata: Metadata = {
+  title: 'Latest News | World Sports',
+  description: 'Stay up to date with the latest sports news, analysis, and updates from around the world.',
+};

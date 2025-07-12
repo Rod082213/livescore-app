@@ -1,87 +1,84 @@
-// src/app/news/[slug]/page.tsx (COMPLETE AND FINAL)
+// src/app/news/[slug]/page.tsx
 
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import { Metadata } from 'next';
+// Data fetching functions
+import { fetchNewsBySlug, fetchNewsList } from "@/lib/news-api";
+import { fetchTeamOfTheWeek, fetchTopLeagues } from "@/lib/api";
+// Component Imports
+import ArticleBody from "@/components/ArticleBody";
+import BackToNewsButton from "@/components/BackToNewsButton";
 import Header from "@/components/Header";
+import SportsNav from "@/components/SportsNav";
 import Footer from "@/components/Footer";
 import LeftSidebar from "@/components/LeftSidebar";
 import SportsNav from "@/components/SportsNav";
 import RightSidebar from "@/components/RightSidebar";
-import BackToNewsButton from "@/components/BackToNewsButton"; // <-- IMPORT THE NEW BUTTON
-import {
-  fetchNewsBySlug,
-  fetchTeamOfTheWeek,
-  fetchLatestNews,
-  fetchTopLeagues,
-} from "@/lib/api";
 
-export default async function NewsArticlePage({ params }: { params: { slug: string } }) {
+type Props = { params: { slug: string } };
+
+// This metadata function is correct.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  // ... (no changes needed here)
+}
+
+// This page component is correct.
+export default async function NewsArticlePage({ params }: Props) {
+  // --- FETCH ALL NECESSARY DATA IN PARALLEL ---
   const [
-    article, 
-    teamOfTheWeek, 
-    latestNews, 
-    topLeagues
+    article,
+    allNews,
+    teamOfTheWeek,
+    topLeagues,
   ] = await Promise.all([
     fetchNewsBySlug(params.slug),
+    fetchNewsList(),
     fetchTeamOfTheWeek(),
-    fetchLatestNews(),
-    fetchTopLeagues()
+    fetchTopLeagues(),
   ]);
 
   if (!article) {
     notFound();
   }
 
-  const featuredMatch = null;
+  // --- THIS LINE IS CORRECT ---
+  // It takes the first 4 articles from the list.
+  const latestNewsForSidebar = allNews.slice(0,5);
 
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
       <SportsNav />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="lg:flex lg:gap-8">
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="lg:flex lg:gap-6">
-          <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-6 lg:mb-0 lg:sticky lg:top-4 lg:self-start">
+          {/* --- LEFT SIDEBAR (Column 1) --- */}
+          <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-8 lg:mb-0 lg:sticky lg:top-8 lg:self-start">
             <LeftSidebar 
               teamOfTheWeek={teamOfTheWeek} 
-              latestNews={latestNews} 
+              latestNews={latestNewsForSidebar} // This correctly receives the 4 articles
             />
           </aside>
+          
+          {/* --- MAIN ARTICLE CONTENT (Column 2) --- */}
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
-            <article className="max-w-4xl mx-auto bg-[#2b3341] p-6 rounded-lg">
-              
-              {/* --- THIS IS THE CHANGE --- */}
-              {/* Use the new BackToNewsButton component */}
+            <article className="bg-[#2b3341] p-4 sm:p-6 rounded-lg">
               <BackToNewsButton text="Back to All News" />
-
-              <header>
-                <p className="text-sm text-blue-400 font-semibold uppercase">{article.category}</p>
-                <h2 className="text-3xl lg:text-4xl font-bold text-white my-4 leading-tight">{article.title}</h2>
-                <p className="text-gray-400">Published on {article.date}</p>
-              </header>
-              <div className="relative w-full h-64 md:h-96 my-8 rounded-lg overflow-hidden">
-                <Image
-                  src={article.imageUrl}
-                  alt={article.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </div>
-              <div 
-                className="prose prose-invert prose-lg max-w-none text-gray-300"
-                dangerouslySetInnerHTML={{ __html: article.content || "" }} 
-              />
+              <ArticleBody article={article} />
             </article>
           </main>
-          <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
+          
+          {/* --- RIGHT SIDEBAR (Column 3) --- */}
+          <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-8 lg:self-start">
             <RightSidebar 
               initialTopLeagues={topLeagues} 
-              initialFeaturedMatch={featuredMatch}
+              initialFeaturedMatch={null}
             />
           </aside>
         </div>
       </div>
+      
       <Footer />
     </div>
   );

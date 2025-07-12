@@ -2,11 +2,12 @@
 
 import Footer from "@/components/Footer";
 import DashboardWrapper from "@/components/DashboardWrapper";
+
 import { 
   fetchDashboardData, 
   fetchTopLeagues, 
   fetchTeamOfTheWeek, 
-  fetchLatestNews 
+  
 } from "@/lib/api";
 
 export default async function Home() {
@@ -19,7 +20,7 @@ export default async function Home() {
     fetchDashboardData(),
     fetchTopLeagues(),
     fetchTeamOfTheWeek(),
-    fetchLatestNews()
+
   ]).catch(error => {
     return [[], [], [], []];
   });
