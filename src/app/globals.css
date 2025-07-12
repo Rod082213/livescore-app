@@ -36,6 +36,14 @@
 body {
   background-color: #1D222D; /* #121212 (very dark) */
   color: var(--color-bets10-light-gray);    /* #f5f5f5 (very light) */
+   height: auto !important;
+  /* This ensures no other style can accidentally hide the scrollbar. */
+  overflow: visible !important;
+}
+body {
+  overflow-y: scroll !important;
+  /* This ensures the body can grow, creating the need for a scrollbar. */
+  height: auto !important;
 }
 
 /* You can also define custom utility classes or component styles here if needed,

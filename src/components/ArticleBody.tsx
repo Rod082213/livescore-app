@@ -1,10 +1,16 @@
-'use client'; // This is essential for all the interactive logic
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import Image from "next/image";
 import { NewsArticleDetail, Heading } from '@/lib/types';
-import ClientOnly from './ClientOnly'; // Your hydration-fix component
-import "../css/news.css"; // Your CSS file
+import ClientOnly from './ClientOnly';
+import "../css/news.css";
+
+// Helper function to create clean IDs from heading text.
+const generateSlug = (text: string): string => {
+  if (!text) return '';
+  return text.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+};
 
 interface ArticleBodyProps {
   article: NewsArticleDetail;
@@ -12,44 +18,71 @@ interface ArticleBodyProps {
 
 export default function ArticleBody({ article }: ArticleBodyProps) {
   const [headings, setHeadings] = useState<Heading[]>([]);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
 
-  // Effect to extract headings from the rendered HTML
   useEffect(() => {
-    if (!contentRef.current) return;
-    const headingElements = contentRef.current.querySelectorAll('h1, h2, h3');
-    const extracted: Heading[] = [];
-    headingElements.forEach((h, index) => {
-      const element = h as HTMLElement;
-      element.id = element.id || `heading-${index}`;
-      extracted.push({
-        id: element.id,
-        text: element.innerText,
-        level: parseInt(element.tagName.substring(1)),
+    const contentElement = contentContainerRef.current;
+    if (!contentElement) return;
+
+    // This observer will now be disconnected once its job is done.
+    const observer = new MutationObserver((mutations, obs) => {
+      const headingElements = contentElement.querySelectorAll('h1, h2, h3');
+
+      // If we found no headings, it might be an empty render, so we wait.
+      if (headingElements.length === 0) {
+        return;
+      }
+
+      const extracted: Heading[] = [];
+      const usedIds: { [key: string]: number } = {};
+
+      headingElements.forEach((h) => {
+        const element = h as HTMLElement;
+        const text = element.innerText;
+        let baseId = generateSlug(text) || "section";
+
+        if (usedIds[baseId] !== undefined) {
+          usedIds[baseId]++;
+          element.id = `${baseId}-${usedIds[baseId]}`;
+        } else {
+          usedIds[baseId] = 0;
+          element.id = baseId;
+        }
+        element.classList.add('scroll-target');
+        extracted.push({ id: element.id, text, level: parseInt(element.tagName.substring(1)) });
       });
+
+      setHeadings(extracted);
+
+      // --- THE CRITICAL FIX ---
+      // We have successfully found and processed the headings.
+      // We MUST disconnect the observer now to prevent it from
+      // firing again and causing a render loop.
+      obs.disconnect();
     });
-    setHeadings(extracted);
+
+    observer.observe(contentElement, { childList: true, subtree: true });
+
+    // This return function is called when the component unmounts.
+    // It's good practice to ensure the observer is disconnected here too.
+    return () => observer.disconnect();
   }, [article.full_article]);
 
-  // Function for smooth scrolling
   const scrollToHeading = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.history.pushState(null, '', `#${id}`);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.history.pushState(null, '', `#${id}`);
+    }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    return new Date(dateString).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  // The completed JSX for the return statement.
   return (
-    // The wrapper for the side-by-side layout
     <div className="content-and-toc-wrapper">
-      
-      {/* Main Article Content */}
       <main className="main-article-content">
         <header>
           <p className="text-sm text-blue-400 font-semibold uppercase">
@@ -64,23 +97,16 @@ export default function ArticleBody({ article }: ArticleBodyProps) {
         </header>
 
         <div className="relative w-full h-64 md:h-96 my-8 rounded-lg overflow-hidden">
-          <Image
-            src={article.image_url}
-            alt={article.title}
-            fill
-            className="object-cover"
-            priority
-          />
+          <Image src={article.image_url} alt={article.title} fill className="object-cover" priority />
         </div>
-
+        
         <div
-          ref={contentRef}
+          ref={contentContainerRef}
           className="prose prose-invert prose-lg max-w-none text-gray-300"
           dangerouslySetInnerHTML={{ __html: article.full_article || "" }}
         />
       </main>
 
-      {/* Table of Contents Sidebar */}
       {headings.length > 0 && (
         <aside className="toc-container">
           <h3>Table of Contents</h3>

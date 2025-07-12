@@ -1,17 +1,34 @@
-// src/lib/types.ts
-
-// Type for the summary card shown on the main news page
+// For the news listing page
 export interface NewsArticleSummary {
-  _id: string;
-  title: string;
+  id: string;
   slug: string;
-  summary: string;
-  imageUrl: string;
-  publishedAt: string;
+  title: string;
+  description: string;
+  image_url: string;
+  pubDate: string;
+  keywords: string; // Comma-separated string
 }
 
-// Type for the full article detail page
-export interface NewsArticleDetail extends NewsArticleSummary {
-  content: string; // The full HTML article content
+// For the detailed news article page
+export interface NewsArticleDetail {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  full_article: string; // The full HTML content
+  image_url: string;
+  pubDate: string;
+  creator: string[];
+  category: string[];
+  country: string[];
   keywords: string[];
+  link: string; // Original source link
+  canonical?: string; // Canonical URL if available
+}
+
+// For the Table of Contents
+export interface Heading {
+  id: string;
+  text: string;
+  level: number;
 }

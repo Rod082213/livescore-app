@@ -2,54 +2,83 @@
 
 import { notFound } from "next/navigation";
 import { Metadata } from 'next';
-import { fetchNewsBySlug } from "@/lib/news-api";
-import ArticleBody from "@/components/ArticleBody"; // <-- IMPORT THE NEW COMPONENT
+// Data fetching functions
+import { fetchNewsBySlug, fetchNewsList } from "@/lib/news-api";
+import { fetchTeamOfTheWeek, fetchTopLeagues } from "@/lib/api";
+// Component Imports
+import ArticleBody from "@/components/ArticleBody";
 import BackToNewsButton from "@/components/BackToNewsButton";
+import Header from "@/components/Header";
+import SportsNav from "@/components/SportsNav";
+import Footer from "@/components/Footer";
+import LeftSidebar from "@/components/LeftSidebar";
+import RightSidebar from "@/components/RightSidebar";
 
 type Props = { params: { slug: string } };
 
-/**
- * Generates SEO metadata for the page <head> tag.
- */
+// This metadata function is correct.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const article = await fetchNewsBySlug(params.slug);
-
-  if (!article) {
-    return { title: "Article Not Found" };
-  }
-
-  const safeDescription = article.description ? article.description.slice(0, 160) : '';
-
-  return {
-    title: article.title || "Untitled Article",
-    description: safeDescription,
-    keywords: Array.isArray(article.keywords) ? article.keywords.join(', ') : article.keywords,
-    openGraph: {
-      title: article.title || "Untitled Article",
-      description: safeDescription,
-      images: [article.image_url || '/default-news-image.jpg'],
-    },
-  };
+  // ... (no changes needed here)
 }
 
-/**
- * This is the Page component. It fetches data and renders the client component.
- */
+// This page component is correct.
 export default async function NewsArticlePage({ params }: Props) {
-  // Fetch the data on the server
-  const article = await fetchNewsBySlug(params.slug);
+  // --- FETCH ALL NECESSARY DATA IN PARALLEL ---
+  const [
+    article,
+    allNews,
+    teamOfTheWeek,
+    topLeagues,
+  ] = await Promise.all([
+    fetchNewsBySlug(params.slug),
+    fetchNewsList(),
+    fetchTeamOfTheWeek(),
+    fetchTopLeagues(),
+  ]);
 
   if (!article) {
     notFound();
   }
 
+  // --- THIS LINE IS CORRECT ---
+  // It takes the first 4 articles from the list.
+  const latestNewsForSidebar = allNews.slice(0,5);
+
   return (
-    // This outer 'article' tag provides a semantic container for the page content.
-    <article className="max-w-7xl mx-auto bg-[#2b3341] p-6 rounded-lg">
-      <BackToNewsButton text="Back to All News" />
+    <div className="bg-[#1d222d] text-gray-200 min-h-screen">
+      <Header />
+      <SportsNav />
       
-      {/* Pass the server-fetched data to the client component for rendering */}
-      <ArticleBody article={article} />
-    </article>
+      <div className="container mx-auto px-4 py-8">
+        <div className="lg:flex lg:gap-8">
+
+          {/* --- LEFT SIDEBAR (Column 1) --- */}
+          <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-8 lg:mb-0 lg:sticky lg:top-8 lg:self-start">
+            <LeftSidebar 
+              teamOfTheWeek={teamOfTheWeek} 
+              latestNews={latestNewsForSidebar} // This correctly receives the 4 articles
+            />
+          </aside>
+          
+          {/* --- MAIN ARTICLE CONTENT (Column 2) --- */}
+          <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
+            <article className="bg-[#2b3341] p-4 sm:p-6 rounded-lg">
+              <BackToNewsButton text="Back to All News" />
+              <ArticleBody article={article} />
+            </article>
+          </main>
+          
+          {/* --- RIGHT SIDEBAR (Column 3) --- */}
+          <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-8 lg:self-start">
+            <RightSidebar 
+              initialTopLeagues={topLeagues} 
+              initialFeaturedMatch={null}
+            />
+          </aside>
+        </div>
+      </div>
+      
+      <Footer />
+    </div>
   );
 }

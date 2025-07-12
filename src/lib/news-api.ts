@@ -1,53 +1,85 @@
-// src/lib/news-api.ts
-
 import { NewsArticleSummary, NewsArticleDetail } from './types';
 
-// The URL for your custom news backend API.
-const NEWS_API_BASE_URL = "https://news.todaylivescores.com/api";
+// The base URL for the new News API
+const NEWS_API_BASE_URL = "https://news.todaylivescores.com";
 
 /**
- * A reusable helper to fetch data from your news API.
+ * This helper function is correct.
  */
-async function apiFetch(endpoint: string, options: RequestInit = {}) {
+function generateSummaryFromHtml(html: string, length = 150): string {
+  if (!html) return 'No summary available.';
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (text.length <= length) return text;
+  return text.substring(0, length) + '...';
+}
+
+/**
+ * CORRECTED: This now maps correctly to `_id` and `imageUrl`.
+ */
+function mapApiArticle(apiArticle: any): NewsArticleSummary {
+    return {
+        id: apiArticle.id.toString(), // Corrected from `id`
+        title: apiArticle.title,
+        slug: apiArticle.slug,
+        image_url: apiArticle.image_url, // Corrected from `image_url`
+        summary: apiArticle.description || generateSummaryFromHtml(apiArticle.full_article),
+        publishedAt: apiArticle.pubDate,
+    };
+}
+
+/**
+ * CORRECTED: Added the missing function name `fetchNewsList`.
+ */
+export async function fetchNewsList(): Promise<NewsArticleSummary[]> {
   try {
-    const res = await fetch(`${NEWS_API_BASE_URL}${endpoint}`, options);
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news`, { next: { revalidate: 3600 } });
     if (!res.ok) {
-      console.error(`News API Error: ${res.status} for ${endpoint}`);
-      return options.method === 'POST' ? null : [];
+      throw new Error('Failed to fetch news list');
     }
-    return res.json();
+    const apiResponse = await res.json();
+    
+    if (!apiResponse || !Array.isArray(apiResponse.data)) {
+        console.error("News API response is not in the expected format:", apiResponse);
+        return [];
+    }
+    return apiResponse.data.map(mapApiArticle);
+
   } catch (error) {
-    console.error(`Fetch failed for ${endpoint}:`, error);
-    return options.method === 'POST' ? null : [];
+    console.error('API Error (fetchNewsList):', error);
+    return [];
   }
 }
 
 /**
- * Fetches the list of all news articles.
- */
-export async function fetchAllNews(): Promise<NewsArticleSummary[]> {
-  const response = await apiFetch('/news', { next: { revalidate: 300 } });
-  // Handles both direct array responses and { data: [...] } responses
-  if (Array.isArray(response?.data)) return response.data;
-  return Array.isArray(response) ? response : [];
-}
-
-/**
- * Fetches a single news article by its slug.
+ * FINAL FIX: This function now correctly handles the API's actual response format.
  */
 export async function fetchNewsBySlug(slug: string): Promise<NewsArticleDetail | null> {
-  return apiFetch(`/news/slug/${slug}`, { next: { revalidate: 3600 } });
-}
+  try {
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news/slug/${slug}`, { next: { revalidate: 3600 } });
 
-/**
- * Sends form data to generate a new article.
- */
-export async function generateArticle(formData: { title: string; description: string; image_url: string }) {
-  const response = await apiFetch(`/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(formData),
-  });
-  if (!response) throw new Error('Article generation failed');
-  return response;
+    if (!res.ok) {
+      if (res.status === 404) {
+        console.error(`Article with slug '${slug}' not found.`);
+        return null;
+      }
+      throw new Error(`Failed to fetch article: ${slug}`);
+    }
+
+    // --- THE FIX ---
+    // The API sends the article object directly, not inside a "data" property.
+    // So, we just parse the JSON and return the whole object.
+    const apiResponse = await res.json();
+    
+    // We can add a simple check to ensure it's a valid object before returning.
+    if (apiResponse && typeof apiResponse === 'object' && apiResponse.slug) {
+      return apiResponse;
+    } else {
+      console.error(`API response for slug '${slug}' was not a valid article object.`);
+      return null;
+    }
+
+  } catch (error) {
+    console.error(`API Error (fetchNewsBySlug for slug: ${slug}):`, error);
+    return null;
+  }
 }

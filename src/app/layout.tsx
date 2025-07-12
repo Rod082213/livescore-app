@@ -1,6 +1,6 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
-import NextTopLoader from 'nextjs-toploader'; // 1. Import the component
+import NextTopLoader from 'nextjs-toploader';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,20 +16,26 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {/* 2. Add the TopLoader component right inside the body */}
+      {/* 
+        THE FIX: Add `suppressHydrationWarning={true}` to the body tag.
+        This prevents browser extensions from causing a fatal hydration error.
+      */}
+      <body className={inter.className} suppressHydrationWarning={true}>
+        
         <NextTopLoader
-          color="#3b82f6" // A nice blue color that matches your theme
+          color="#3b82f6"
           initialPosition={0.08}
           crawlSpeed={200}
           height={3}
           crawl={true}
-          showSpinner={false} // Set to false to hide the default spinner icon
+          showSpinner={false}
           easing="ease"
           speed={200}
           shadow="0 0 10px #3b82f6,0 0 5px #3b82f6"
         />
+        
         {children}
+        
       </body>
     </html>
   );
