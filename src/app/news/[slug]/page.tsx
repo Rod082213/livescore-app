@@ -12,7 +12,6 @@ import Header from "@/components/Header";
 import SportsNav from "@/components/SportsNav";
 import Footer from "@/components/Footer";
 import LeftSidebar from "@/components/LeftSidebar";
-import SportsNav from "@/components/SportsNav";
 import RightSidebar from "@/components/RightSidebar";
 
 type Props = { params: { slug: string } };

@@ -2,16 +2,7 @@
 
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails, Article as IArticle } from "@/data/mockData";
 import { isToday, format, isBefore, startOfDay } from 'date-fns';
-import dbConnect from './mongodb';
-import ArticleModel from '../models/Article';
-import { generateNewsSlug } from './utils';
 
-async function generateArticleContent(title: string): Promise<string> {
-    const teams = title.match(/(Chelsea|PSG|Inter Milan|San Siro|Real Madrid|Barcelona|Liverpool|Manchester United)/gi) || [];
-    let content = `<p class="lead">In the ever-churning world of football transfers, speculation is a constant companion...</p><h2>Setting the Record Straight</h2><p>Speaking on a popular sports broadcast, the journalist directly addressed the recent reports...</p>`;
-    if (teams.length > 0) { content += `<h2>Focus on ${teams.join(' & ')}</h2><p>The focus for clubs like ${teams.join(', ')} remains on building a cohesive unit...</p>`; }
-    return Promise.resolve(content);
-}
 
 const API_URL = 'https://v3.football.api-sports.io';
 const API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_API_KEY;
@@ -245,72 +236,8 @@ export async function fetchTeamSquad(teamId: string) {
 
 // --- NEWS FUNCTIONS ---
 
-async function fetchFromNewsApiAndSave() {
-  await dbConnect();
-  const NEWS_API_KEY = process.env.NEWS_API_KEY;
-  if (!NEWS_API_KEY) return;
-  const newsApiUrl = `https://newsdata.io/api/1/news?apikey=${NEWS_API_KEY}&category=sports&language=en&size=10`;
-  try {
-    const response = await fetch(newsApiUrl);
-    if (!response.ok) throw new Error('Failed to fetch from newsdata.io');
-    const data = await response.json();
-    if (data.status !== 'success' || !data.results) return;
-    const articlesToSave = data.results.map((apiArticle: any) => ({
-      apiId: apiArticle.article_id, slug: generateNewsSlug(apiArticle.title), category: "SPORTS",
-      title: apiArticle.title, imageUrl: apiArticle.image_url || '/placeholder-news.png',
-      publishedAt: new Date(apiArticle.pubDate),
-    }));
-    await ArticleModel.insertMany(articlesToSave, { ordered: false });
-  } catch (error: any) {
-    if (error.code !== 11000) { console.error("Error fetching/saving news:", error); }
-  }
-}
 
-export async function fetchLatestNews(): Promise<(IArticle & { slug: string })[]> {
-  await dbConnect();
-  try {
-    const latestArticle = await ArticleModel.findOne().sort({ createdAt: -1 });
-    let needsFetch = true;
-    if (latestArticle) {
-        if (!isBefore(startOfDay(latestArticle.createdAt), startOfDay(new Date()))) {
-            needsFetch = false;
-        }
-    }
-    if (needsFetch) { await fetchFromNewsApiAndSave(); }
-    const articlesFromDb = await ArticleModel.find().sort({ publishedAt: -1 }).limit(3);
-    return articlesFromDb.map(doc => ({
-      id: doc.apiId, slug: doc.slug, category: doc.category, title: doc.title,
-      imageUrl: doc.imageUrl, date: format(new Date(doc.publishedAt), 'MMM d, yyyy'),
-    }));
-  } catch (error) { return []; }
-}
 
-export async function fetchAllNews(): Promise<(IArticle & { snippet: string, slug: string })[]> {
-  await dbConnect();
-  try {
-    const articlesFromDb = await ArticleModel.find().sort({ publishedAt: -1 });
-    return articlesFromDb.map(doc => ({
-      id: doc.apiId, slug: doc.slug, category: doc.category, title: doc.title,
-      imageUrl: doc.imageUrl, date: format(new Date(doc.publishedAt), 'MMM d, yyyy'),
-      snippet: "Click to read the full story about this breaking news in the world of sports..."
-    }));
-  } catch (error) { return []; }
-}
-
-export async function fetchNewsBySlug(slug: string): Promise<(IArticle & { content?: string }) | null> {
-  await dbConnect();
-  try {
-    const articleDoc = await ArticleModel.findOne({ slug: slug });
-    if (!articleDoc) return null;
-    const generatedContent = await generateArticleContent(articleDoc.title);
-    return {
-      id: articleDoc.apiId, slug: articleDoc.slug, category: articleDoc.category,
-      title: articleDoc.title, imageUrl: articleDoc.imageUrl,
-      date: format(new Date(articleDoc.publishedAt), 'MMM d, yyyy'),
-      content: generatedContent
-    };
-  } catch (error) { return null; }
-}
 
 export async function fetchMatchDetailsById(id: string): Promise<MatchDetails | null> {
     if (!API_KEY) { return null; }
