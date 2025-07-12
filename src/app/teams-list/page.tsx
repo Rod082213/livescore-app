@@ -1,3 +1,5 @@
+// src/app/teams-list/page.tsx
+
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
@@ -9,35 +11,34 @@ import TeamSidebar from '@/components/TeamSidebar';
 import { 
   fetchAllTeamsFromAllLeagues,
   fetchTeamOfTheWeek,
-  fetchLatestNews 
 } from '@/lib/api';
+import { fetchNewsList } from '@/lib/news-api';
+import { createSlug } from '@/lib/utils'; // <--- 1. IMPORT THE SLUG FUNCTION
 
 export default async function AllTeamsListPage() {
   
-  // Fetch data for the main content AND the LeftSidebar
-  const [allLeagues, teamOfTheWeek, latestNews] = await Promise.all([
+  const [allLeagues, teamOfTheWeek, allNews] = await Promise.all([
     fetchAllTeamsFromAllLeagues(),
     fetchTeamOfTheWeek(),
-    fetchLatestNews()
+    fetchNewsList()
   ]);
+
+  const latestNewsForSidebar = allNews.slice(0, 3);
 
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
       <SportsNav />
       <div className="container mx-auto px-4 py-6">
-        {/* This is the three-column layout container */}
         <div className="flex flex-col lg:flex-row gap-6">
             
-          {/* Column 1: Left Sidebar */}
-          <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4">
+          <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
             <LeftSidebar 
               teamOfTheWeek={teamOfTheWeek} 
-              latestNews={latestNews} 
+              latestNews={latestNewsForSidebar}
             />
           </aside>
             
-          {/* Column 2: Main Content Area */}
           <main className="w-full lg:flex-1">
             <h1 className="text-3xl font-bold text-white mb-8">All Teams By League</h1>
             <div className="space-y-10">
@@ -50,7 +51,10 @@ export default async function AllTeamsListPage() {
                     {league.teams.map((team) => (
                       <Link 
                         key={team.id}
-                        href={`/team/${team.id}`}
+                        // 2. --- THIS IS THE CHANGE ---
+                        // Before: href={`/team/${team.id}`}
+                        // After: Use the createSlug function on the team's name
+                        href={`/team/${createSlug(team.name)}`}
                         className="group bg-[#2b3341] p-4 rounded-lg flex flex-col items-center justify-center text-center hover:bg-[#3e4859] transition-colors"
                       >
                         <Image
@@ -71,8 +75,7 @@ export default async function AllTeamsListPage() {
             </div>
           </main>
           
-          {/* Column 3: Right Sidebar */}
-          <aside className="lg:w-72 lg:flex-shrink-0 ">
+          <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
              <TeamSidebar />
           </aside>
 

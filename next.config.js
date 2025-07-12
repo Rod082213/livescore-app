@@ -40,6 +40,12 @@ const nextConfig = {
        {
         protocol: 'https',
         hostname: 'i2-prod.football.london', 
+      },
+       {
+        protocol: 'https',
+        hostname: 'media.api-sports.io', // Main domain for API-Football
+        port: '',
+        pathname: '/**', // Allow all paths from this domain
       }
     ],
   },

@@ -3,7 +3,6 @@
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails, Article as IArticle } from "@/data/mockData";
 import { isToday, format, isBefore, startOfDay } from 'date-fns';
 
-
 const API_URL = 'https://v3.football.api-sports.io';
 const API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_API_KEY;
 const serverOptions = { method: 'GET', headers: { 'x-apisports-key': API_KEY as string }, next: { revalidate: 60 } };
@@ -150,17 +149,47 @@ export async function fetchStandings(leagueId: string, season: string = "2023"):
 }
 
 export async function fetchAllTeamsFromAllLeagues(): Promise<{ leagueName: string, teams: { id: number, name: string, logo: string }[] }[]> {
-    if (!API_KEY) { return []; }
+    if (!API_KEY) {
+        return [];
+    }
+
     try {
         const leagueIds = [39, 140, 135, 78, 61, 2, 3, 88, 94, 253];
-        const allLeaguesPromise = leagueIds.map(id => fetch(`${API_URL}/standings?league=${id}&season=2023`, serverOptions).then(res => res.ok ? res.json() : null));
-        const results = await Promise.all(allLeaguesPromise);
-        return results.filter(result => result && result.response && result.response.length > 0).map(result => {
-            const leagueInfo = result.response[0].league;
-            const teams = leagueInfo.standings[0].map((s: ApiStanding) => ({ id: s.team.id, name: s.team.name, logo: s.team.logo, }));
-            return { leagueName: leagueInfo.name, teams: teams };
-        });
-    } catch (error) { return []; }
+
+        const leagueDetailsPromises = leagueIds.map(id =>
+            fetch(`${API_URL}/leagues?id=${id}`, serverOptions).then(res => res.ok ? res.json() : null)
+        );
+        const leagueDetailsResults = await Promise.all(leagueDetailsPromises);
+        const leaguesMap = new Map(
+            leagueDetailsResults
+                .filter(Boolean)
+                .map(result => [result.response[0].league.id, result.response[0].league.name])
+        );
+
+        const teamsPromises = leagueIds.map(id =>
+            fetch(`${API_URL}/teams?league=${id}&season=2023`, serverOptions).then(res => res.ok ? res.json() : null)
+        );
+        const teamsResults = await Promise.all(teamsPromises);
+
+        return teamsResults
+            .filter(result => result && result.response && result.response.length > 0)
+            .map(result => {
+                const leagueId = result.parameters.league;
+                const leagueName = leaguesMap.get(parseInt(leagueId)) || 'Unknown League';
+
+                const teams = result.response.map((item: any) => ({
+                    id: item.team.id,
+                    name: item.team.name,
+                    logo: item.team.logo,
+                }));
+                
+                return { leagueName, teams };
+            });
+
+    } catch (error) {
+        console.error("Error in fetchAllTeamsFromAllLeagues:", error);
+        return [];
+    }
 }
 
 export async function fetchTeamOfTheWeek(leagueId: string = "39", season: string = "2023"): Promise<Player[]> {
@@ -203,6 +232,7 @@ export async function fetchAllTopPlayers(leagueId: string = "39", season: string
     } catch (error) { return []; }
 }
 
+// --- THIS LINE IS NOW FIXED ---
 export async function fetchTeamInfo(teamId: string) {
     if (!API_KEY) return null;
     try {

@@ -3,14 +3,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Player } from "@/data/mockData";
-// 1. --- THE FIX: IMPORT THE CORRECT TYPE ---
-// We use the consistent NewsArticleSummary type from our types.ts file.
 import { NewsArticleSummary } from "@/lib/types";
-import ClientOnly from "./ClientOnly"; // Import for safe date formatting
+import ClientOnly from "./ClientOnly";
+
+// --- HELPER FUNCTION: For safe date formatting ---
+// This is a good practice to prevent "Invalid Date" errors.
+// It handles cases where the date string might be missing or invalid.
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Date unavailable';
+  const date = new Date(dateString);
+  // Check if the created date object is valid
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 
 interface LeftSidebarProps {
   teamOfTheWeek: Player[];
-  // 2. The component now correctly expects an array of NewsArticleSummary
   latestNews: NewsArticleSummary[];
 }
 
@@ -33,19 +44,14 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
                             ))}
                         </ul>
 
-                        {/* --- THIS IS THE NEW BUTTON --- */}
-                        {/* It's placed right after the list of players */}
                         <div className="mt-4">
-                          
-<Link 
-  href="/teams-list" 
-  className="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition-colors"
->
-  View All Teams
-</Link>
+                            <Link 
+                                href="/teams-list" 
+                                className="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                View All Teams
+                            </Link>
                         </div>
-                        {/* --- END OF NEW BUTTON --- */}
-
                     </>
                 ) : <div className="text-center text-gray-400 py-10 text-sm">Player data is currently unavailable.</div>}
             </div>
@@ -55,9 +61,8 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
                 {latestNews && latestNews.length > 0 ? (
                     <ul className="space-y-4">
                         {latestNews.map((article) => (
-                            <li key={article.id}>
+                            <li key={article.id || article._id}>
                                <Link href={`/news/${article.slug}`} className="flex items-start gap-3 group">
-                                    {/* 3. USE THE CORRECT PROPERTY NAME: image_url */}
                                     <div className="relative w-20 h-16 flex-shrink-0">
                                         <Image 
                                             src={article.image_url} 
@@ -68,7 +73,6 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
                                         />
                                     </div>
                                     <div className="flex-1">
-                                        {/* 'keywords' is a string, so we can take the first one */}
                                         <p className="text-teal-400 text-xs font-semibold mb-1 uppercase">
                                             {article.keywords?.split(',')[0] || 'News'}
                                         </p>
@@ -76,9 +80,16 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
                                             {article.title}
                                         </p>
                                         <p className="text-gray-400 text-xs mt-1">
-                                            {/* 4. FORMAT THE DATE SAFELY */}
+                                            {/* --- THE FIX IS HERE --- */}
                                             <ClientOnly>
-                                                {new Date(article.pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                {/* 
+                                                    BEFORE (The problem): new Date(article.pubDate)
+                                                    This failed because `pubDate` was undefined.
+                                                    
+                                                    AFTER (The solution): We use the correct property `publishedAt`
+                                                    and our safe `formatDate` helper function.
+                                                */}
+                                                {formatDate(article.publishedAt)}
                                             </ClientOnly>
                                         </p>
                                     </div>

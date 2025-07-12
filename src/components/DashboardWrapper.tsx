@@ -11,7 +11,8 @@ import SportsNav from '@/components/SportsNav';
 import SearchResults from '@/components/SearchResults';
 import SearchModal from '@/components/SearchModal';
 import { getMatchesByDate, searchEverything } from '@/app/actions';
-import { LeagueGroup, Match, Team, News } from '@/data/mockData';
+import { LeagueGroup, Match, Team } from '@/data/mockData';
+import { NewsArticleSummary } from '@/lib/types'; // <--- IMPORT THE CORRECT NEWS TYPE
 import { XCircle, Search } from 'lucide-react';
 
 const isToday = (someDate: Date) => {
@@ -33,7 +34,8 @@ interface DashboardWrapperProps {
   initialMatches: LeagueGroup[];
   initialTopLeagues: LeagueGroup[];
   initialTeamOfTheWeek: Team[];
-  initialLatestNews: (News & { slug: string })[];
+  // THIS IS THE CHANGE: Use the consistent type from your types library
+  initialLatestNews: NewsArticleSummary[]; 
   initialFeaturedMatch: Match | null;
 }
 
@@ -41,7 +43,7 @@ export default function DashboardWrapper({
   initialMatches,
   initialTopLeagues,
   initialTeamOfTheWeek,
-  initialLatestNews,
+  initialLatestNews, // This prop now correctly receives the fetched news
   initialFeaturedMatch,
 }: DashboardWrapperProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -126,7 +128,7 @@ export default function DashboardWrapper({
       }, 15000);
     }
     return () => { if (pollingInterval) clearInterval(pollingInterval); };
-  }, [selectedDate]);
+  }, [selectedDate, initialMatches, matches]);
 
   const liveMatchCount = (matches || []).reduce((count, group) => {
     return count + group.matches.filter(match => match.status === 'LIVE' || match.status === 'HT').length;
