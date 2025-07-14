@@ -47,7 +47,7 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
                         <div className="mt-4">
                             <Link 
                                 href="/teams-list" 
-                                className="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                                className="block w-full text-center text-blue-500 font-semibold py-2 rounded-lg hover:text-white transition-colors"
                             >
                                 View All Teams
                             </Link>

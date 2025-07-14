@@ -43,9 +43,9 @@ export default function GenerateNewsPage() {
   return (
     <main className="bg-[#1e1e1e] min-h-screen p-4 sm:p-6 flex items-center justify-center">
       <div className="w-full max-w-2xl bg-[#2b3341] p-6 sm:p-8 rounded-xl shadow-lg">
-        <h1 className="text-3xl font-bold mb-6 text-center text-white title-gradient">
+        <h2 className="text-3xl font-bold mb-6 text-center text-white title-gradient">
           Generate News Article
-        </h1>
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* ... all your input fields ... */}
           <div className="mb-4">

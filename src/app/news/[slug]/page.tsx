@@ -2,7 +2,6 @@
 
 import { notFound } from "next/navigation";
 import { Metadata } from 'next';
-import * as cheerio from 'cheerio';
 
 // Data fetching functions
 import { fetchNewsBySlug, fetchNewsList } from "@/lib/news-api";
@@ -14,7 +13,7 @@ import BackToNewsButton from "@/components/BackToNewsButton";
 import Header from "@/components/Header";
 import SportsNav from "@/components/SportsNav";
 import Footer from "@/components/Footer";
-import LeftSidebar from "@/components/LeftSidebar";
+
 import RightSidebar from "@/components/RightSidebar";
 
 type Props = { params: { slug: string } };
@@ -23,58 +22,90 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await fetchNewsBySlug(params.slug);
 
   if (!article) {
-    return { title: "Article Not Found" };
+    return {
+      title: "Article Not Found",
+      description: "The news article you are looking for could not be found.",
+    };
   }
 
-  const $ = cheerio.load(article.full_article || '');
-  const mainTitle = $('h1').first().text().trim() || article.title || "Untitled Article";
+  const title = article.title || "News Article";
   
-  // --- NEW, CURATED KEYWORD LOGIC ---
-  const stopWords = new Set(['a', 'an', 'the', 'in', 'on', 'for', 'and', 'with', 'to', 'is', 'of', 'her', 'his', 'was', 'at', 'by']);
-  const cleanWords = mainTitle.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(word => word.length > 1 && !stopWords.has(word));
-  const allPhrases: string[] = [];
-  if (cleanWords.length >= 3) {
-    for (let i = 0; i <= cleanWords.length - 3; i++) {
-      allPhrases.push(`${cleanWords[i]} ${cleanWords[i+1]} ${cleanWords[i+2]}`);
-    }
-  }
-  if (cleanWords.length >= 2) {
-    for (let i = 0; i <= cleanWords.length - 2; i++) {
-      allPhrases.push(`${cleanWords[i]} ${cleanWords[i+1]}`);
-    }
-  }
-  const uniqueKeywords = Array.from(new Set(allPhrases));
-  const finalKeywords = uniqueKeywords.slice(0, 4).join(', ');
+  // --- THIS IS THE FIX: A robust description generator ---
+  let finalDescription = '';
+  const minDescriptionLength = 70; // Set a minimum acceptable length
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const canonicalUrl = `${siteUrl}/news/${article.slug}`;
-  const safeDescription = article.description ? article.description.slice(0, 160) : 'No summary available.';
-  let authorName = 'TodayLiveScores Staff';
-  if (article.creator && Array.isArray(article.creator) && article.creator.length > 0) {
-    authorName = article.creator.join(', ');
+  // First, check if the API summary is good enough
+  if (article.summary && article.summary.length > minDescriptionLength) {
+    // If it's good, use it, but make sure it's not too long
+    finalDescription = article.summary.slice(0, 155) + (article.summary.length > 155 ? '...' : '');
+  } else {
+    // If the summary is too short or missing, generate a better one from the title.
+    const fallback = `Read the full story on "${title}". Get in-depth analysis and the latest updates on TLiveScores, your definitive source for breaking sports news.`;
+    // Ensure the generated fallback also respects the length limit.
+    finalDescription = fallback.slice(0, 155) + (fallback.length > 155 ? '...' : '');
   }
+
+  let keywords: string[] = [];
+  if (article.keywords) {
+    if (Array.isArray(article.keywords)) {
+      keywords = article.keywords;
+    } else if (typeof article.keywords === 'string') {
+      keywords = article.keywords.split(',').map(k => k.trim());
+    }
+  }
+  if (keywords.length === 0) {
+    keywords = title.split(' ').slice(0, 10);
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com/';
+  const canonicalUrl = `${siteUrl}/news/${article.slug}`;
+  const imageUrl = article.image_url || `${siteUrl}/default-social-card.png`;
 
   return {
-    title: mainTitle,
-    description: safeDescription,
-    keywords: finalKeywords,
-    author: [{ name: authorName }],
-    publisher: 'TodayLiveScores',
-    alternates: { canonical: canonicalUrl },
-    robots: { index: true, follow: true },
+    title,
+    description: finalDescription, // Use our newly generated description
+    keywords: keywords.slice(0, 7),
+    
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title: mainTitle,
-      description: safeDescription,
+      title: `${title} | TLiveScores`,
+      description: finalDescription, // Use it here too
       url: canonicalUrl,
-      siteName: 'TodayLiveScores',
-      images: [{ url: article.image_url || `${siteUrl}/default-news-image.jpg`, width: 1200, height: 630 }],
+      siteName: 'TLiveScores',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
       locale: 'en_US',
       type: 'article',
+      publishedTime: article.publishedAt,
+      authors: article.creator || ['TLiveScores Staff'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | TLiveScores`,
+      description: finalDescription, // And here
+      images: [imageUrl],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+      },
     },
   };
 }
 
-// The default export component remains the same.
+
+// The page component remains the same
 export default async function NewsArticlePage({ params }: Props) {
   const [
     article,
@@ -101,12 +132,7 @@ export default async function NewsArticlePage({ params }: Props) {
       
       <div className="container mx-auto px-4 py-8">
         <div className="lg:flex lg:gap-8">
-          <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-8 lg:mb-0 lg:sticky lg:top-8 lg:self-start">
-            <LeftSidebar 
-              teamOfTheWeek={teamOfTheWeek} 
-              latestNews={latestNewsForSidebar}
-            />
-          </aside>
+         
           
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
             <article className="bg-[#2b3341] p-4 sm:p-6 rounded-lg">

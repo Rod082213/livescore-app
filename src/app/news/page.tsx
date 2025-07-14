@@ -14,6 +14,7 @@ import PaginationControls from '@/components/PaginationControls';
 import { fetchNewsList } from "@/lib/news-api";
 import { fetchTeamOfTheWeek, fetchTopLeagues } from "@/lib/api";
 import { NewsArticleSummary } from '@/lib/types';
+import BackButton from '@/components/BackButton';
 
 // --- THE FIX for "Invalid Date" ---
 // A robust helper function to safely format dates.
@@ -26,6 +27,59 @@ const formatDate = (dateString: string | null | undefined): string => {
     month: 'long',
     day: 'numeric',
   });
+};
+
+export const metadata: Metadata = {
+  // Title: Under 60 characters. Clear, concise, and keyword-rich.
+  title: 'Latest Sports News & Headlines',
+
+  // Description: Under 160 characters. A compelling summary of the page content.
+  description: 'Stay up-to-date with breaking sports news, transfer rumors, and expert analysis. Get the latest headlines for football, basketball, tennis, and more.',
+
+  // Keywords for context and for search engines that still use them.
+  keywords: ['sports news', 'latest news', 'football news', 'transfer news', 'basketball', 'tennis', 'sports headlines', 'live scores news', 'sports updates'],
+
+  // Canonical URL to define the authoritative page for search engines.
+  alternates: {
+    canonical: '/news', // Assuming your page route is /news
+  },
+
+  // Open Graph tags for optimized sharing on social platforms like Facebook.
+  openGraph: {
+    title: 'Latest Sports News & Headlines | TLiveScores',
+    description: 'Stay up-to-date with breaking sports news, transfer rumors, and expert analysis. Your daily source for sports headlines.',
+    url: '/news',
+    siteName: 'TLiveScores',
+    // IMPORTANT: Create an image (1200x630px) and place it in your /public folder.
+    images: [
+      {
+        url: '/social-card-news.png', // Replace with your actual image path
+        width: 1200,
+        height: 630,
+        alt: 'The latest sports news headlines on TLiveScores',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+
+  // Twitter-specific tags for a great appearance when shared on Twitter.
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Latest Sports News & Headlines | TLiveScores',
+    description: 'Stay up-to-date with breaking sports news, transfer rumors, and expert analysis. Your daily source for sports headlines.',
+    images: ['/social-card-news.png'], // Must be the same as og:image
+  },
+
+  // Clear instructions for search engine crawlers.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
 };
 
 
@@ -59,6 +113,10 @@ export default async function NewsListingPage({
       <SportsNav />
       
       <div className="container mx-auto px-4 py-8">
+           <BackButton />
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-8 border-b border-gray-700 pb-4">
+              Latest News
+            </h1>
         <div className="lg:flex lg:gap-8">
           
           <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-8 lg:mb-0 lg:sticky lg:top-8 lg:self-start">
@@ -69,9 +127,7 @@ export default async function NewsListingPage({
           </aside>
           
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-8 border-b border-gray-700 pb-4">
-              Latest News
-            </h1>
+            
             {paginatedArticles && paginatedArticles.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -139,7 +195,3 @@ const NewsArticleCard = ({ article }: { article: NewsArticleSummary }) => (
 );
 
 
-export const metadata: Metadata = {
-  title: 'Latest News | World Sports',
-  description: 'Stay up to date with the latest sports news, analysis, and updates from around the world.',
-};

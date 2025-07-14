@@ -1,19 +1,29 @@
 // src/app/teams-list/page.tsx
 
+import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+
+// Component Imports
 import Header from '@/components/Header';
+import BackButton from "@/components/BackButton";
 import Footer from '@/components/Footer';
 import SportsNav from '@/components/SportsNav';
 import LeftSidebar from '@/components/LeftSidebar';
-import TeamSidebar from '@/components/TeamSidebar';
+import TeamSidebar from '@/components/TeamSidebar'; // Assuming you still use this, otherwise use SimplifiedRightSidebar
 
+// Data Fetching and Utility Imports
 import { 
   fetchAllTeamsFromAllLeagues,
   fetchTeamOfTheWeek,
 } from '@/lib/api';
 import { fetchNewsList } from '@/lib/news-api';
-import { createSlug } from '@/lib/utils'; // <--- 1. IMPORT THE SLUG FUNCTION
+import { createTeamSlug } from '@/lib/utils';
+
+export const metadata: Metadata = {
+  title: 'Browse All Football Teams by League',
+  description: 'Explore a complete directory of football teams from top leagues worldwide. Select any team to view their live scores, upcoming fixtures, and league standings.',
+};
 
 export default async function AllTeamsListPage() {
   
@@ -29,37 +39,41 @@ export default async function AllTeamsListPage() {
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
       <SportsNav />
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
+      <div className="container mx-auto px-4 py-8">
+        
+        {/* --- THIS IS THE NEW LOCATION FOR THE H1 --- */}
+        <BackButton text="Back to Teams List" />
+        <h1 className="text-3xl font-bold text-white mb-8">All Teams By League</h1>
+
+        <div className="lg:flex lg:gap-8">
             
-          <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
+          {/* Column 1: Left Sidebar */}
+          <aside className="w-full lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
             <LeftSidebar 
               teamOfTheWeek={teamOfTheWeek} 
               latestNews={latestNewsForSidebar}
             />
           </aside>
             
+          {/* Column 2: Main Content Area */}
           <main className="w-full lg:flex-1">
-            <h1 className="text-3xl font-bold text-white mb-8">All Teams By League</h1>
+            {/* --- THE H1 HAS BEEN REMOVED FROM HERE --- */}
             <div className="space-y-10">
               {allLeagues.map((league) => (
-                <div key={league.leagueName}>
+                <div key={league.name}>
                   <h2 className="text-2xl font-semibold text-white mb-4 border-b-2 border-gray-700 pb-2">
                     {league.leagueName}
                   </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     {league.teams.map((team) => (
                       <Link 
                         key={team.id}
-                        // 2. --- THIS IS THE CHANGE ---
-                        // Before: href={`/team/${team.id}`}
-                        // After: Use the createSlug function on the team's name
-                        href={`/team/${createSlug(team.name)}`}
+                        href={`/team/${createTeamSlug(team.name, team.id)}`}
                         className="group bg-[#2b3341] p-4 rounded-lg flex flex-col items-center justify-center text-center hover:bg-[#3e4859] transition-colors"
                       >
                         <Image
                           src={team.logo}
-                          alt={team.name}
+                          alt={`${team.name} logo`}
                           width={64}
                           height={64}
                           className="h-16 w-16 object-contain mb-3"
@@ -75,7 +89,8 @@ export default async function AllTeamsListPage() {
             </div>
           </main>
           
-          <aside className="lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
+          {/* Column 3: Right Sidebar */}
+          <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
              <TeamSidebar />
           </aside>
 

@@ -8,9 +8,7 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'v3.football.api-sports.io',
       },
-      // === THIS IS THE NEW PART FOR NEWS IMAGES ===
-      // newsdata.io provides images from many different sources,
-      // so we need to allow them.
+      
       {
         protocol: 'https',
         hostname: 'www.sportsmole.co.uk', // The one from the error

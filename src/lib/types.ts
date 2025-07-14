@@ -7,6 +7,8 @@ export interface NewsArticleSummary {
   image_url: string;
   pubDate: string;
   keywords: string; // Comma-separated string
+  publishedAt: string;
+
 }
 
 // For the detailed news article page

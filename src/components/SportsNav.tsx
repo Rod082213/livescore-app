@@ -4,7 +4,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Shield, Dribbble, Trophy, Newspaper } from 'lucide-react';
+import { Shield, Dribbble, Trophy, Newspaper, Users } from 'lucide-react';
 
 interface SportsNavProps {
   liveMatchCount: number;
@@ -15,9 +15,10 @@ const SportsNav = ({ liveMatchCount }: SportsNavProps) => {
 
   const navItems = [
     { name: 'Football', href: '/', icon: <Shield size={18} />, count: liveMatchCount },
-    { name: 'Basketball', href: '/basketball', icon: <Dribbble size={18} /> },
-    { name: 'Tennis', href: '/tennis', icon: <Trophy size={18} /> },
+    // { name: 'Basketball', href: '/basketball', icon: <Dribbble size={18} /> },
+    // { name: 'Tennis', href: '/tennis', icon: <Trophy size={18} /> },
     { name: 'News', href: '/news', icon: <Newspaper size={18} /> },
+    { name: 'Teams', href: '/teams-list', icon: <Users size={18} /> },
    
     // You can add more items here to test the scrolling
     // { name: 'Ice Hockey', href: '/hockey', icon: <div className="w-4 h-4" /> },

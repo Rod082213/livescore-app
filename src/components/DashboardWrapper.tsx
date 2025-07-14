@@ -12,7 +12,7 @@ import SearchResults from '@/components/SearchResults';
 import SearchModal from '@/components/SearchModal';
 import { getMatchesByDate, searchEverything } from '@/app/actions';
 import { LeagueGroup, Match, Team } from '@/data/mockData';
-import { NewsArticleSummary } from '@/lib/types'; // <--- IMPORT THE CORRECT NEWS TYPE
+import { NewsArticleSummary } from '@/lib/types';
 import { XCircle, Search } from 'lucide-react';
 
 const isToday = (someDate: Date) => {
@@ -34,7 +34,6 @@ interface DashboardWrapperProps {
   initialMatches: LeagueGroup[];
   initialTopLeagues: LeagueGroup[];
   initialTeamOfTheWeek: Team[];
-  // THIS IS THE CHANGE: Use the consistent type from your types library
   initialLatestNews: NewsArticleSummary[]; 
   initialFeaturedMatch: Match | null;
 }
@@ -43,7 +42,7 @@ export default function DashboardWrapper({
   initialMatches,
   initialTopLeagues,
   initialTeamOfTheWeek,
-  initialLatestNews, // This prop now correctly receives the fetched news
+  initialLatestNews,
   initialFeaturedMatch,
 }: DashboardWrapperProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -58,7 +57,18 @@ export default function DashboardWrapper({
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState<'all' | 'live' | 'finished' | 'upcoming'>('all');
+  const [isPageVisible, setIsPageVisible] = useState(true);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  
+  // --- FIX: Use a ref to track the very first render ---
+  // This prevents an unnecessary data fetch on mount, since we have server-provided `initialMatches`.
+  const isInitialLoad = useRef(true);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => setIsPageVisible(!document.hidden);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,7 +84,6 @@ export default function DashboardWrapper({
     debounce(async (currentQuery: string) => {
       if (currentQuery.length < 3) {
         setSearchResults({ leagues: [], teams: [] });
-        setIsSearchLoading(false);
         return;
       }
       setIsSearchLoading(true);
@@ -89,10 +98,11 @@ export default function DashboardWrapper({
     performSearch(query);
   }, [query, performSearch]);
 
+  // --- REWRITTEN DATA FETCHING LOGIC ---
   useEffect(() => {
     const isViewingToday = isToday(selectedDate);
-    let pollingInterval: NodeJS.Timeout | null = null;
-
+    
+    // --- SCENARIO 1: User explicitly requests a non-today date. SHOW LOADER. ---
     if (!isViewingToday) {
       const loadHistoricData = async () => {
         setIsLoading(true);
@@ -101,38 +111,53 @@ export default function DashboardWrapper({
         setIsLoading(false);
       };
       loadHistoricData();
-    } else {
-      const loadDashboardData = async () => {
-        setIsLoading(true);
-        try {
-          const response = await fetch('/api/dashboard');
-          if (!response.ok) throw new Error('Proxy API failed');
-          const updatedMatches = await response.json();
-          setMatches(updatedMatches);
-        } catch (error) {}
-        setIsLoading(false);
-      };
-      
-      const isInitialRender = JSON.stringify(matches) === JSON.stringify(initialMatches);
-      if (!isInitialRender) {
-        loadDashboardData();
-      }
-
-      pollingInterval = setInterval(async () => {
-        try {
-          const response = await fetch('/api/dashboard');
-          if (!response.ok) return;
-          const polledMatches = await response.json();
-          setMatches(polledMatches);
-        } catch (error) {}
-      }, 15000);
+      return; // Stop here, no polling needed for past/future dates.
     }
-    return () => { if (pollingInterval) clearInterval(pollingInterval); };
-  }, [selectedDate, initialMatches, matches]);
 
-  const liveMatchCount = (matches || []).reduce((count, group) => {
-    return count + group.matches.filter(match => match.status === 'LIVE' || match.status === 'HT').length;
-  }, 0);
+    // --- SCENARIO 2: Viewing today's date. All fetches should be SILENT. ---
+    let pollingInterval: NodeJS.Timeout | null = null;
+    
+    const loadTodaysDataSilently = async () => {
+      console.log("Fetching today's data in the background...");
+      try {
+        const response = await fetch('/api/dashboard');
+        if (!response.ok) return;
+        const updatedMatches = await response.json();
+        setMatches(updatedMatches);
+      } catch (error) {
+        console.error("Silent dashboard fetch failed:", error);
+      }
+    };
+
+    if (isPageVisible) {
+      // On the very first render, we don't need to fetch because we have `initialMatches`.
+      // On subsequent times this effect runs (e.g., tabbing back), we DO want to fetch.
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false; // Mark the initial load as complete.
+      } else {
+        // This runs when the user tabs back to the page.
+        loadTodaysDataSilently();
+      }
+      
+      // Setup the silent polling.
+      pollingInterval = setInterval(loadTodaysDataSilently, 15000);
+    }
+
+    // The cleanup function is essential. It clears the interval when the component
+    // re-renders (because date or visibility changed) or unmounts.
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [selectedDate, isPageVisible]); // This effect now ONLY depends on these two state changes.
+
+
+  const liveMatchCount = useMemo(() => {
+    return (matches || []).reduce((count, group) => {
+      return count + group.matches.filter(match => match.status === 'LIVE' || match.status === 'HT').length;
+    }, 0);
+  }, [matches]);
 
   const filteredMatches = useMemo(() => {
     let dataToFilter = matches || [];
@@ -140,12 +165,12 @@ export default function DashboardWrapper({
 
     if (query.length >= 3) {
       dataToFilter = dataToFilter.map(group => ({
-          ...group,
-          matches: group.matches.filter(match => 
-              match.homeTeam.name.toLowerCase().includes(lowerCaseQuery) ||
-              match.awayTeam.name.toLowerCase().includes(lowerCaseQuery) ||
-              group.leagueName.toLowerCase().includes(lowerCaseQuery)
-          )
+        ...group,
+        matches: group.matches.filter(match => 
+            match.homeTeam.name.toLowerCase().includes(lowerCaseQuery) ||
+            match.awayTeam.name.toLowerCase().includes(lowerCaseQuery) ||
+            group.leagueName.toLowerCase().includes(lowerCaseQuery)
+        )
       })).filter(group => group.matches.length > 0);
     }
     
@@ -193,7 +218,6 @@ export default function DashboardWrapper({
     </div>
   );
  
-
   return (
     <>
       <Header onSearchToggle={() => setIsSearchModalOpen(true)}>
@@ -214,6 +238,7 @@ export default function DashboardWrapper({
             <LeftSidebar teamOfTheWeek={initialTeamOfTheWeek} latestNews={initialLatestNews} />
           </aside>
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
+            
             {(query.length >= 3) && (
                 <div className="bg-gray-800 p-3 rounded-lg mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">

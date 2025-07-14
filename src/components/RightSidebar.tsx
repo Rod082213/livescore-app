@@ -1,14 +1,17 @@
+// src/components/RightSidebar.tsx
+
 "use client";
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Standing } from "@/data/mockData";
 import MiniStandingsTable from "./MiniStandingsTable";
 import { getStandingsForLeague } from "@/app/actions";
-// import AdCarousel from "./AdCarousel";
 import { ChallengeWidget } from "@/components/features/challenge/ChallengeWidget";
 import { ChallengeModal } from "@/components/features/challenge/ChallengeModal";
+import { createLeagueSlug } from "@/lib/utils"; // <-- IMPORT THE CORRECT FUNCTION
 
 interface League {
   id: number;
@@ -17,7 +20,6 @@ interface League {
 }
 
 interface RightSidebarProps {
-  // Making the prop optional is good practice when you have a fallback
   initialTopLeagues?: League[];
   initialFeaturedMatch: any;
   hasSubmittedChallenge: boolean;
@@ -41,10 +43,6 @@ const RightSidebar = ({
         { type: "Pro Tip", title: "How to Maximize Your Wins on the Big Bass Bonanza.", imgSrc: "/big-bass.jpg", alt: "Big Bass Bonanza" }
     ];
     
-    // --- THIS IS THE FIX ---
-    // We declare a state variable `topLeagues` and initialize it with the prop.
-    // The `|| []` ensures that if `initialTopLeagues` is undefined,
-    // `topLeagues` will be an empty array, preventing the crash.
     const [topLeagues] = useState<League[]>(initialTopLeagues || []);
 
     const handleLeagueClick = async (leagueId: number) => {
@@ -63,7 +61,6 @@ const RightSidebar = ({
         <>
             <aside className="hidden xl:block w-full lg:w-72 flex-shrink-0">
                 <div className="space-y-4">
-                    
                     <div onClick={() => setIsModalOpen(true)}>
                       <ChallengeWidget />
                     </div>
@@ -71,18 +68,29 @@ const RightSidebar = ({
                     <div className="bg-[#2b3341] rounded-lg p-4">
                         <h2 className="text-md font-bold text-white mb-2">League Standings</h2>
                         <ul className="space-y-1">
-                            {/* This line now works because `topLeagues` is guaranteed to be an array */}
                             {topLeagues.map(league => (
                                 <li key={league.id} className="flex flex-col bg-gray-800/20 rounded-md">
-                                    <div onClick={() => handleLeagueClick(league.id)} className="flex items-center justify-between p-2 hover:bg-gray-700/50 group cursor-pointer rounded-md">
-                                        <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-between p-2 group rounded-md">
+                                        <Link 
+                                          // --- THIS IS THE FIX ---
+                                          // It now uses the consistent createLeagueSlug function.
+                                          href={`/league/${createLeagueSlug(league.name, league.id)}`}
+                                          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                                        >
                                             <Image src={league.logo} alt={league.name} width={24} height={24} className="h-6 w-6 object-contain"/>
                                             <span className="text-gray-300 font-medium text-sm group-hover:text-white">{league.name}</span>
-                                        </div>
-                                        {expandedLeagueId === league.id ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                        </Link>
+                                        
+                                        <button 
+                                          onClick={() => handleLeagueClick(league.id)}
+                                          className="p-1"
+                                          aria-label={`Expand standings for ${league.name}`}
+                                        >
+                                          {expandedLeagueId === league.id ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                        </button>
                                     </div>
                                     {expandedLeagueId === league.id && (
-                                        <div>
+                                        <div className="px-2 pb-2">
                                             {isLoading ? (
                                                 <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin"/></div>
                                             ) : (
@@ -95,11 +103,9 @@ const RightSidebar = ({
                         </ul>
                     </div>
                      <div className="bg-[#2b3341] rounded-lg p-6 mt-4">
-            <h3 className="text-lg font-bold text-white mb-2">About Us</h3>
-              <p className="text-sm text-gray-300 mb-4"><span className="text-blue-400 font-bold">Todaylivescores,</span> founded as a leading real-time sports media brand delivering live scores across football, cricket, tennis, basketball, and hockey, reaching thousands of users monthly in 200+ territories</p>
-    
-        </div>
-                    {/* ... Rest of your component */}
+                        <h3 className="text-lg font-bold text-white mb-2">About Us</h3>
+                        <p className="text-sm text-gray-300 mb-4"><span className="text-blue-400 font-bold">Todaylivescores,</span> founded as a leading real-time sports media brand delivering live scores across football, cricket, tennis, basketball, and hockey, reaching thousands of users monthly in 200+ territories</p>
+                    </div>
                     <div className="bg-[#2b3341] rounded-lg p-4">
                       <h2 className="text-md font-bold text-white mb-4">Game Promotions</h2>
                       <ul className="hidden lg:block space-y-4">
@@ -118,7 +124,6 @@ const RightSidebar = ({
                     </div>
                 </div>
             </aside>
-
             <ChallengeModal 
               isOpen={isModalOpen}
               onClose={() => setIsModalOpen(false)}
