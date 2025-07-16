@@ -3,6 +3,7 @@
 
 import Image from 'next/image';
 import { TrendingUp, ShieldCheck } from 'lucide-react';
+import { generateMockPredictions } from '@/lib/predictions';
 
 const FormPill = ({ result }: { result: string }) => {
     const styles = {
@@ -10,55 +11,53 @@ const FormPill = ({ result }: { result: string }) => {
         D: 'bg-gray-500',
         L: 'bg-red-500',
     };
-    // Use a fallback style for '-' or any other character
     const style = styles[result as keyof typeof styles] || 'bg-gray-700';
     return <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${style}`}>{result}</div>;
 };
 
-const PredictionForm = ({ predictions, form, teams }: { predictions?: any, form?: any, teams: any }) => {
+interface PredictionFormProps {
+  predictions?: { home: number; draw: number; away: number };
+  form?: { home: string; away: string };
+  teams: { home: { name: string; logo: string }; away: { name:string; logo: string }};
+}
+
+const PredictionForm = ({ predictions, form, teams }: PredictionFormProps) => {
+    const displayPredictions = predictions || generateMockPredictions(teams.home.name, teams.away.name);
+
     return (
         <div className="bg-[#2b3341] rounded-lg p-6 text-white">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <TrendingUp size={20} /> Prediction & Form
             </h3>
 
-            {/* Probability Bar Section */}
-            {predictions ? (
-                <div className="space-y-2 mb-6">
-                    <div className="flex justify-between text-sm font-semibold">
-                        <span className="flex items-center gap-2">
-                            <Image src={teams.home.logo} alt={teams.home.name} width={16} height={16} className="object-contain"/>
-                            {teams.home.name}
-                        </span>
-                        <span>Draw</span>
-                        <span className="flex items-center gap-2">
-                            {teams.away.name}
-                            <Image src={teams.away.logo} alt={teams.away.name} width={16} height={16} className="object-contain"/>
-                        </span>
-                    </div>
-                    <div className="w-full h-2 rounded-full flex bg-gray-700">
-                        <div className="bg-blue-500 h-2 rounded-l-full" style={{ width: `${predictions.home}%` }}></div>
-                        <div className="bg-gray-500 h-2" style={{ width: `${predictions.draw}%` }}></div>
-                        <div className="bg-green-500 h-2 rounded-r-full" style={{ width: `${predictions.away}%` }}></div>
-                    </div>
-                    <div className="flex justify-between text-sm font-bold">
-                        <span>{predictions.home}%</span>
-                        <span>{predictions.draw}%</span>
-                        <span>{predictions.away}%</span>
-                    </div>
+            <div className="space-y-2 mb-6">
+                <div className="flex justify-between text-sm font-semibold">
+                    <span className="flex items-center gap-2">
+                        <Image src={teams.home.logo} alt={teams.home.name} width={16} height={16} className="object-contain"/>
+                        {teams.home.name}
+                    </span>
+                    <span>Draw</span>
+                    <span className="flex items-center gap-2">
+                        {teams.away.name}
+                        <Image src={teams.away.logo} alt={teams.away.name} width={16} height={16} className="object-contain"/>
+                    </span>
                 </div>
-            ) : (
-                <div className="text-center text-gray-400 text-sm mb-6 py-4">
-                    Prediction data not available.
+                <div className="w-full h-2 rounded-full flex bg-gray-700 overflow-hidden">
+                    <div className="bg-blue-500 h-2" style={{ width: `${displayPredictions.home}%` }}></div>
+                    <div className="bg-gray-500 h-2" style={{ width: `${displayPredictions.draw}%` }}></div>
+                    <div className="bg-green-500 h-2" style={{ width: `${displayPredictions.away}%` }}></div>
                 </div>
-            )}
+                <div className="flex justify-between text-sm font-bold">
+                    <span>{displayPredictions.home}%</span>
+                    <span>{displayPredictions.draw}%</span>
+                    <span>{displayPredictions.away}%</span>
+                </div>
+            </div>
 
-            {/* Form Guide - Always displays */}
             <div className="space-y-3 mb-6">
                 <div className="flex justify-between items-center text-sm">
                     <span className="font-semibold">{teams.home.name}</span>
                     <div className="flex gap-1.5">
-                        {/* Use optional chaining and provide a fallback string of '-----' */}
                         {(form?.home || '-----').split('').map((r: string, i: number) => <FormPill key={i} result={r}/>)}
                     </div>
                 </div>
@@ -70,7 +69,6 @@ const PredictionForm = ({ predictions, form, teams }: { predictions?: any, form?
                 </div>
             </div>
             
-            {/* Static Bet Buttons */}
             <div className="grid grid-cols-2 gap-3 text-sm mb-6">
               <button className="flex items-center justify-center gap-2 bg-gray-700/50 p-2 rounded-md hover:bg-gray-700 cursor-not-allowed opacity-50">Both Teams to Score</button>
               <button className="flex items-center justify-center gap-2 bg-gray-700/50 p-2 rounded-md hover:bg-gray-700 cursor-not-allowed opacity-50">Over 2.5 Goals</button>

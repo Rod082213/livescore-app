@@ -4,7 +4,7 @@ import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
 import Image from 'next/image';
-import { IPost, ICategory, ITag } from '@/models/Post';
+import { IPost, ICategory, ITag } from '@/models/Post'; // Ensure ICategory and ITag are correctly exported from here
 import dbConnect from '@/lib/mongodb';
 import Post from '@/models/Post';
 import Category from '@/models/Category';
@@ -12,7 +12,7 @@ import Tag from '@/models/Tag';
 import { unstable_noStore as noStore } from 'next/cache';
 
 async function getBlogPageData() {
-    noStore();
+    noStore(); // Opt-out of static rendering for dynamic data
     await dbConnect();
 
     const [posts, categories, tags] = await Promise.all([
@@ -21,15 +21,32 @@ async function getBlogPageData() {
         Tag.find({}).sort({ name: 1 }).lean()
     ]);
 
-    return { 
-        posts: JSON.parse(JSON.stringify(posts)), 
-        categories: JSON.parse(JSON.stringify(categories)), 
-        tags: JSON.parse(JSON.stringify(tags)) 
+    // JSON.parse(JSON.stringify()) is used to serialize Mongoose documents (even lean ones)
+    // for safe passing through Next.js server components, ensuring _id is a string etc.
+    return {
+        posts: JSON.parse(JSON.stringify(posts)),
+        categories: JSON.parse(JSON.stringify(categories)),
+        tags: JSON.parse(JSON.stringify(tags))
     };
 }
 
 const PostCard = ({ post }: { post: IPost }) => {
-    const summary = post.content?.find(b => b.type === 'p')?.value.html.replace(/<[^>]*>/g, '').slice(0, 100) + '...' || 'Read more';
+    let summary = 'Read more'; // Default summary
+
+    // --- FIX START ---
+    // Safely check if post.content is an array before trying to find on it
+    if (Array.isArray(post.content)) {
+        const paragraphBlock = post.content.find(b => b.type === 'p');
+        if (paragraphBlock && paragraphBlock.value && paragraphBlock.value.html) {
+            summary = paragraphBlock.value.html.replace(/<[^>]*>/g, '').slice(0, 100) + '...';
+        }
+    } else if (post.content && typeof post.content === 'object' && post.content.type === 'p' && post.content.value && post.content.value.html) {
+        // Fallback for cases where 'content' might be a single object instead of an array,
+        // and that object matches the expected content block structure.
+        summary = post.content.value.html.replace(/<[^>]*>/g, '').slice(0, 100) + '...';
+    }
+    // --- FIX END ---
+
     const firstCategory = post.categories?.[0] as ICategory | undefined;
 
     return (
@@ -43,9 +60,9 @@ const PostCard = ({ post }: { post: IPost }) => {
                 <Image
                     src={post.featuredImageUrl || '/placeholder-image.jpg'}
                     alt={post.title}
-                    layout="fill"
-                    objectFit="cover"
-                    className="transition-transform duration-300 group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
             </div>
             <div className="p-5 flex flex-col">
@@ -73,7 +90,8 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }
                 <ul className="space-y-2">
                     {categories.map(cat => (
                         <li key={cat._id.toString()}>
-                            <Link href={`/blog/category/${cat.name.toLowerCase()}`} className="text-gray-300 hover:text-blue-400 transition-colors block">
+                            {/* Use encodeURIComponent for URL safety */}
+                            <Link href={`/blog/category/${encodeURIComponent(cat.name.toLowerCase())}`} className="text-gray-300 hover:text-blue-400 transition-colors block">
                                 {cat.name}
                             </Link>
                         </li>
@@ -84,7 +102,7 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }
                 <h3 className="text-lg font-bold text-white mb-3">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                     {tags.map(tag => (
-                        <Link key={tag._id.toString()} href={`/blog/tag/${tag.name.toLowerCase()}`} className="bg-gray-700 text-gray-300 text-xs font-medium px-3 py-1 rounded-full hover:bg-gray-600 transition-colors">
+                        <Link key={tag._id.toString()} href={`/blog/tag/${encodeURIComponent(tag.name.toLowerCase())}`} className="bg-gray-700 text-gray-300 text-xs font-medium px-3 py-1 rounded-full hover:bg-gray-600 transition-colors">
                             #{tag.name}
                         </Link>
                     ))}
@@ -99,21 +117,20 @@ export default async function BlogListPage() {
 
     return (
         <div className="bg-[#1d222d] text-white min-h-screen">
-            
-        <Header />
-           <SportsNav />
+            <Header />
+            <SportsNav />
             <div className="container mx-auto px-4 py-12">
-            
-   
-        <BackButton />
-    
 
-    {/* The title remains perfectly centered in the parent container */}
-    <h1 className="text-4xl md:text-5xl font-extrabold border-b border-gray-700 pb-4 mb-4">
-        Blogs
-    </h1>
+                {/* Fixed layout for BackButton and centered Blog title */}
+                <div className="relative mb-8">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2">
+                        <BackButton />
+                    </div>
+                    <h1 className="text-center text-4xl md:text-5xl font-extrabold pb-4 border-b border-gray-700">
+                        Blogs
+                    </h1>
+                </div>
 
-                
                 <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-8">
                     <main className="lg:col-span-9">
                         {posts.length > 0 ? (
@@ -133,9 +150,8 @@ export default async function BlogListPage() {
                     <Sidebar categories={categories} tags={tags} />
                 </div>
             </div>
-             <Footer />
+            <Footer />
         </div>
-        
     );
 }
 

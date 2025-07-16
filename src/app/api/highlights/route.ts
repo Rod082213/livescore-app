@@ -1,51 +1,24 @@
-// src/app/api/highlights/route.ts
+// src/app/api/youtube-highlights-by-date/route.ts
 import { NextResponse, NextRequest } from 'next/server';
-
-const HIGHLIGHTLY_API_KEY = process.env.HIGHLIGHTLY_API_KEY;
-const HIGHLIGHTLY_HOST = 'sports.highlightly.net';
+import { fetchYoutubeHighlightsByDate } from '@/lib/api'; // Reuse our server-side fetcher
 
 export async function GET(request: NextRequest) {
-  if (!HIGHLIGHTLY_API_KEY) {
-    return new NextResponse('API Key not configured', { status: 500 });
-  }
-
-  // Get the matchId from the query parameters (e.g., /api/highlights?matchId=123)
   const searchParams = request.nextUrl.searchParams;
-  const matchId = searchParams.get('matchId');
+  const date = searchParams.get('date');
 
-  if (!matchId) {
-    return new NextResponse('matchId is required', { status: 400 });
+  if (!date) {
+    return new NextResponse('Date parameter is required', { status: 400 });
   }
 
-  const url = `https://${HIGHLIGHTLY_HOST}/football/highlights/match/${matchId}`;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return new NextResponse('Invalid date format. Use YYYY-MM-DD.', { status: 400 });
+  }
 
   try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-host': HIGHLIGHTLY_HOST,
-        'x-rapidapi-key': HIGHLIGHTLY_API_KEY,
-      },
-      // Short cache for client-side fetches
-      next: { revalidate: 60 },
-    });
-
-    if (!response.ok) {
-      // It's okay if a match is not found (404), just return empty
-      if (response.status === 404) {
-        return NextResponse.json([]);
-      }
-      // For other errors, log them
-      console.error(`Highlightly API error: ${response.status}`);
-      return new NextResponse(response.statusText, { status: response.status });
-    }
-
-    const result = await response.json();
-    // Forward the result to the client component
-    return NextResponse.json(result.data || result);
-
+    const highlights = await fetchYoutubeHighlightsByDate(date);
+    return NextResponse.json(highlights);
   } catch (error) {
-    console.error('[API_ROUTE_HIGHLIGHTS] Fetch error:', error);
+    console.error(`Error in /api/youtube-highlights-by-date for date ${date}:`, error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

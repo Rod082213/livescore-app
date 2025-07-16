@@ -22,7 +22,7 @@ interface RightSidebarProps {
   initialTopLeagues?: League[];
 }
 
-const RightSidebar = ({ 
+const RightSidebarNews = ({ 
   initialTopLeagues,
 }: RightSidebarProps) => {
     // State for the modal has been removed
@@ -30,7 +30,7 @@ const RightSidebar = ({
     const [standings, setStandings] = useState<Standing[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-   
+    
     
     const [topLeagues] = useState<League[]>(initialTopLeagues || []);
 
@@ -88,14 +88,14 @@ const RightSidebar = ({
                     </ul>
                 </div>
                  <div className="bg-[#2b3341] rounded-lg p-6 mt-4">
-                    <h3 className="text-lg font-bold text-white mb-2">About Us</h3>
-                    <p className="text-sm text-gray-300 mb-4"><span className="text-blue-400 font-bold">Todaylivescores,</span> founded as a leading real-time sports media brand delivering live scores across football, cricket, tennis, basketball, and hockey, reaching thousands of users monthly in 200+ territories</p>
+                    <h3 className="text-lg font-bold text-white mb-2">About News</h3>
+                    <p className="text-sm text-gray-300 mb-4">Never miss a moment with <span className="text-blue-400 font-bold">today's live scores</span> From breaking transfer news to injury updates, game highlights, and tactical insights, our Latest News section keeps you ahead of the curve. Check in daily for real-time sports coverage.</p>
                 </div>
-               
+                
             </div>
         </aside>
         // --- The ChallengeModal component has been removed from here ---
     );
 };
 
-export default RightSidebar;
+export default RightSidebarNews;

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LeftSidebar from "@/components/LeftSidebar";
-import RightSidebar from "@/components/RightSidebar";
+import RightSidebarNews from "@/components/RightSideBarNews";
 import ClientOnly from '@/components/ClientOnly';
 import SportsNav from "@/components/SportsNav";
 import PaginationControls from '@/components/PaginationControls';
@@ -153,7 +153,7 @@ export default async function NewsListingPage({
           </main>
           
           <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-8 lg:self-start">
-            <RightSidebar 
+            <RightSidebarNews 
               initialTopLeagues={topLeagues} 
               initialFeaturedMatch={null}
             />

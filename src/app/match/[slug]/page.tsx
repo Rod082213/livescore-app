@@ -12,14 +12,21 @@ import PredictionForm from '@/components/match/PredictionForm';
 import WelcomeOffer from '@/components/match/WelcomeOffer';
 import MatchDescription from '@/components/match/MatchDescription';
 import Link from 'next/link';
-import { fetchMatchDetailsById, getMatchHighlights } from '@/lib/api'; 
-import MatchHighlights from '@/components/match/MatchHighlights';
+import { notFound } from 'next/navigation';
 
-// The props are destructured directly in the function signature
+// --- MODIFIED ---
+// Import all necessary data-fetching functions and components
+// We've added a new (hypothetical) function to get the live stream.
+import { fetchMatchDetailsById, getMatchHighlights, fetchMatchLineups, getLiveStreamForMatch } from '@/lib/api'; 
+import MatchHighlights from '@/components/match/MatchHighlights';
+import MatchLineups from '@/components/match/MatchLineups';
+
+// --- NEW ---
+// Helper array to identify live match statuses. Adjust based on your API's status codes.
+const LIVE_STATUSES = ['LIVE', 'IN_PLAY', '1H', 'HT', '2H', 'ET', 'PENALTIES'];
+
 export default async function MatchDetailPage({ params }: { params: { slug: string } }) {
   
-  // --- FIX for the Next.js warning ---
-  // We extract the slug from the destructured params
   const { slug } = params;
   const slugParts = slug.split('-');
   const matchId = slugParts[slugParts.length - 1];
@@ -34,28 +41,33 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
       );
   }
 
-  // Fetch match details from the football API
-  const matchDetails = await fetchMatchDetailsById(matchId);
+  // Fetch primary data first
+  const [matchDetails, lineups] = await Promise.all([
+    fetchMatchDetailsById(matchId),
+    fetchMatchLineups(matchId),
+  ]);
 
+  // If the primary match data doesn't exist, show a 404 page
   if (!matchDetails) {
-    return (
-      <div className="bg-[#1d222d] text-gray-200 min-h-screen">
-        <Header />
-        <SportsNav />
-        <main className="container mx-auto px-4 py-6 flex flex-col items-center justify-center text-center h-[50vh]">
-            <h1 className="text-4xl font-bold">404 - Match Not Found</h1>
-            <p className="mt-4 text-gray-400">Sorry, we couldn't find the details for this match (ID: {matchId}).</p>
-            <BackButton />
-        </main>
-        <Footer />
-      </div>
-    );
+    notFound();
   }
 
-  // Fetch highlights from the highlights API
-  const matchHighlights = await getMatchHighlights(matchId, matchDetails.status);
+  let matchHighlights = [];
+  let liveStream = null;
 
-  // Now we render the page with the real data
+  const isLive = LIVE_STATUSES.includes(matchDetails.status.type);
+  const isFinished = matchDetails.status.type === 'FINISHED';
+
+  if (isLive) {
+    // If the match is live, fetch the stream data.
+    // NOTE: You need to create the `getLiveStreamForMatch` function in your `lib/api.ts`.
+    liveStream = await getLiveStreamForMatch(matchId);
+  } else if (isFinished) {
+    // If the match is finished, fetch the highlights.
+    matchHighlights = await getMatchHighlights(matchDetails);
+  }
+  // If the match is upcoming ('NOT_STARTED'), neither will be fetched.
+
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
@@ -68,10 +80,16 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             
+            {/* --- MODIFIED COMPONENT --- */}
+            {/* Pass BOTH liveStream and highlights to the component. */}
+            {/* It will decide which one to display based on the logic we built. */}
+            <MatchHighlights 
+              highlights={matchHighlights} 
+              liveStream={liveStream} 
+            />
+            
             <MatchTimeline events={matchDetails.events} status={matchDetails.status} />
-
-            {/* This component correctly receives the (potentially empty) highlights array */}
-            <MatchHighlights highlights={matchHighlights} />
+            <MatchLineups lineups={lineups} />
             
             <MatchStatistics 
               statistics={matchDetails.statistics} 

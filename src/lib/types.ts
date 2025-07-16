@@ -1,3 +1,7 @@
+// src/lib/types.ts
+
+// --- EXISTING TYPES (No Changes) ---
+
 // For the news listing page
 export interface NewsArticleSummary {
   id: string;
@@ -6,9 +10,8 @@ export interface NewsArticleSummary {
   description: string;
   image_url: string;
   pubDate: string;
-  keywords: string; // Comma-separated string
+  keywords: string;
   publishedAt: string;
-
 }
 
 // For the detailed news article page
@@ -17,15 +20,15 @@ export interface NewsArticleDetail {
   slug: string;
   title: string;
   description: string;
-  full_article: string; // The full HTML content
+  full_article: string;
   image_url: string;
   pubDate: string;
   creator: string[];
   category: string[];
   country: string[];
   keywords: string[];
-  link: string; // Original source link
-  canonical?: string; // Canonical URL if available
+  link: string;
+  canonical?: string;
 }
 
 // For the Table of Contents
@@ -35,8 +38,62 @@ export interface Heading {
   level: number;
 }
 
+// For Video Highlights
 export interface Highlight {
-  id: string;      // A unique ID for the video from the API
-  title: string;   // e.g., "Goal by Player X (78')"
-  embedUrl: string;// The URL for the iframe embed
+  id: string;
+  title: string;
+  embedUrl: string;
+}
+
+// For Match Lineups
+export interface Player {
+  id: number;
+  name: string;
+  number: number;
+  pos: string;
+  grid: string | null;
+}
+
+export interface Lineup {
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  formation: string;
+  startXI: Player[];
+  substitutes: Player[];
+}
+
+export interface MatchLineupData {
+  home: Lineup;
+  away: Lineup;
+}
+
+// ==================================================================
+// === NEW TYPES THAT WERE MISSING (ADD THESE)                    ===
+// ==================================================================
+
+// Defines the shape of a single match object used throughout the app
+export interface Match {
+  id: number;
+  time: string;
+  status: 'LIVE' | 'UPCOMING' | 'FT' | 'HT' | string; // Allow other statuses but specify common ones
+  homeTeam: { name: string; logo: string };
+  awayTeam: { name: string; logo: string };
+  score: string;
+  league: {
+    id: number;
+    name: string;
+    logo: string;
+    country: string;
+    flag: string;
+  };
+}
+
+// Defines the structure of the data object for the new daily highlights page
+export interface DailyPageData {
+  liveMatches: Match[];
+  upcomingMatches: Match[];
+  finishedWithHighlights: { match: Match; highlight: Highlight }[];
 }

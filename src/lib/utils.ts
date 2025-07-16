@@ -1,13 +1,17 @@
 // src/lib/utils.ts
 
-// --- 1. THE "MASTER" SLUG FUNCTION ---
-// This is our single, robust function for converting any name into a clean slug.
-// All other slug functions will use this for consistency.
+// --- 1. THE "MASTER" SLUG FUNCTION (NOW IMPROVED) ---
+// This new version correctly handles accented and special characters.
 export const createSlug = (name: string): string => {
   if (!name) return '';
-  return name
-    .toLowerCase()
-    .replace(/&/g, 'and')      // Replace & with 'and'
+
+  const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;'
+  const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
+  const p = new RegExp(a.split('').join('|'), 'g')
+
+  return name.toString().toLowerCase()
+    .replace(p, c => b.charAt(a.indexOf(c))) // Replace special characters first
+    .replace(/&/g, '-and-')      // Replace & with 'and'
     .replace(/\s+/g, '-')      // Replace spaces with -
     .replace(/[^\w\-]+/g, '')  // Remove all non-word chars except hyphen
     .replace(/\-\-+/g, '-')    // Replace multiple hyphens with a single one
@@ -17,6 +21,7 @@ export const createSlug = (name: string): string => {
 
 
 // --- 2. YOUR SLUG CREATION FUNCTIONS (Unchanged) ---
+// These functions will now automatically benefit from the improved createSlug function above.
 
 // Function for team slugs (e.g., "manchester-united-33")
 export const createTeamSlug = (name: string, id: number): string => {
@@ -45,13 +50,11 @@ export function generateNewsSlug(title: string): string {
 }
 
 
-// --- 3. THIS IS THE NEW FUNCTION THAT WAS MISSING ---
-// This generic function extracts the numerical ID from the end of a slug.
-// It will solve the 'getLeagueIdFromSlug is not defined' error on your dynamic pages.
+// --- 3. THE GENERIC ID EXTRACTION FUNCTION (Unchanged) ---
+// This function is correct and does not need changes.
 export const getIdFromSlug = (slug: string): string | null => {
     if (!slug) return null;
     const parts = slug.split('-');
     const potentialId = parts[parts.length - 1];
-    // Use a regular expression to confirm the last part is composed only of digits.
     return /^\d+$/.test(potentialId) ? potentialId : null;
 };

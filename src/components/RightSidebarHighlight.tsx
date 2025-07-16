@@ -22,7 +22,7 @@ interface RightSidebarProps {
   initialTopLeagues?: League[];
 }
 
-const RightSidebar = ({ 
+const RightSidebarHighlight = ({ 
   initialTopLeagues,
 }: RightSidebarProps) => {
     // State for the modal has been removed
@@ -30,7 +30,11 @@ const RightSidebar = ({
     const [standings, setStandings] = useState<Standing[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-   
+    const promotions = [
+        { type: "New Release", title: "Unleash the Power of the Gods in 'Gates of Olympus'!", imgSrc: "/gate-olympus.jpg", alt: "Gates of Olympus" },
+        { type: "Weekly Bonus", title: "Your Weekend Bonus is Here: Claim 50 Free Spins!", imgSrc: "/sweet-bonanza.jpg", alt: "Weekly bonus" },
+        { type: "Pro Tip", title: "How to Maximize Your Wins on the Big Bass Bonanza.", imgSrc: "/big-bass.jpg", alt: "Big Bass Bonanza" }
+    ];
     
     const [topLeagues] = useState<League[]>(initialTopLeagues || []);
 
@@ -87,15 +91,12 @@ const RightSidebar = ({
                         ))}
                     </ul>
                 </div>
-                 <div className="bg-[#2b3341] rounded-lg p-6 mt-4">
-                    <h3 className="text-lg font-bold text-white mb-2">About Us</h3>
-                    <p className="text-sm text-gray-300 mb-4"><span className="text-blue-400 font-bold">Todaylivescores,</span> founded as a leading real-time sports media brand delivering live scores across football, cricket, tennis, basketball, and hockey, reaching thousands of users monthly in 200+ territories</p>
-                </div>
-               
+                 
+                
             </div>
         </aside>
         // --- The ChallengeModal component has been removed from here ---
     );
 };
 
-export default RightSidebar;
+export default RightSidebarHighlight;

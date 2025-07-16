@@ -1,12 +1,12 @@
-// src/lib/api.ts (Complete, Final, Production-Ready)
+// src/lib/api.ts (Complete and Final with YouTube Highlights)
 
 import { cache } from 'react';
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails } from "@/data/mockData";
 import { format } from 'date-fns';
-import { Highlight, NewsArticleSummary, NewsArticleDetail } from './types';
+import { Highlight, NewsArticleSummary, NewsArticleDetail, Lineup, MatchLineupData } from './types';
 
 // ==================================================================
-// === FOOTBALL API CONFIGURATION                                 ===
+// === FOOTBALL API CONFIGURATION (No Changes)                    ===
 // ==================================================================
 const FOOTBALL_API_URL = 'https://v3.football.api-sports.io';
 const FOOTBALL_API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_API_KEY;
@@ -23,7 +23,7 @@ type Team = {
   logo: string;
 };
 
-// --- MAPPING FUNCTIONS ---
+// --- MAPPING FUNCTIONS (No Changes) ---
 function mapStatus(status: any): { status: Match['status'], time?: string } {
     if (['FT', 'AET', 'PEN'].includes(status.short)) return { status: 'FT', time: 'FT' };
     if (status.short === 'HT') return { status: 'HT', time: 'HT' };
@@ -67,7 +67,7 @@ function mapApiStandingToStanding(apiStanding: ApiStanding): Standing {
     };
 }
 
-// --- FOOTBALL API FETCHING FUNCTIONS ---
+// --- FOOTBALL API FETCHING FUNCTIONS (No Changes) ---
 export const fetchDashboardData = cache(async (): Promise<LeagueGroup[]> => {
     if (!FOOTBALL_API_KEY) return [];
     try {
@@ -203,6 +203,8 @@ export const fetchMatchDetailsById = cache(async (id: string): Promise<MatchDeta
         const apiFixture: ApiFixture = fixtureData.response?.[0];
         if (!apiFixture) return null;
         const match: MatchDetails = mapApiFixtureToMatch(apiFixture) as MatchDetails;
+        // The fixture object is needed by the YouTube function, so we attach it here.
+        match.fixture = apiFixture.fixture;
         const [eventsRes, statsRes] = await Promise.all([
             fetch(`${FOOTBALL_API_URL}/fixtures/events?fixture=${id}`, footballServerOptions),
             fetch(`${FOOTBALL_API_URL}/fixtures/statistics?fixture=${id}`, footballServerOptions),
@@ -229,59 +231,67 @@ export const fetchMatchDetailsById = cache(async (id: string): Promise<MatchDeta
 
 
 // ==================================================================
-// === HIGHLIGHTS API CLIENT (FINAL & CLEAN)                      ===
+// === HIGHLIGHTS API SECTION (REPLACED WITH YOUTUBE API)         ===
 // ==================================================================
-const HIGHLIGHTLY_API_KEY = process.env.HIGHLIGHTLY_API_KEY;
-const HIGHLIGHTLY_HOST = 'sports.highlightly.net';
-const HIGHLIGHTLY_BASE_URL = `https://${HIGHLIGHTLY_HOST}`;
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/search';
 
-async function fetchFromHighlightlyApi<T>(endpoint: string, cacheDurationInSeconds?: number): Promise<T | null> {
-  if (!HIGHLIGHTLY_API_KEY) {
-    console.error('[Highlightly API] CRITICAL: HIGHLIGHTLY_API_KEY is not defined.');
-    return null;
-  }
-  const url = `${HIGHLIGHTLY_BASE_URL}${endpoint}`;
-  try {
-    const fetchOptions: RequestInit = {
-        method: 'GET',
-        headers: { 
-            'x-rapidapi-host': HIGHLIGHTLY_HOST, 
-            'x-rapidapi-key': HIGHLIGHTLY_API_KEY, 
-        },
-    };
-    if (cacheDurationInSeconds !== undefined) {
-        fetchOptions.next = { revalidate: cacheDurationInSeconds };
-    }
-    const response = await fetch(url, fetchOptions);
-    if (!response.ok) {
-        if (response.status !== 404) {
-             console.error(`[Highlightly API] Error response from ${url}: ${response.status}`);
-        }
-        return null;
-    }
-    const result = await response.json();
-    return result.data || result;
-  } catch (error) {
-    console.error(`[Highlightly API] A critical fetch error occurred for ${url}:`, error);
-    return null;
-  }
-}
-
-export const getMatchHighlights = cache(async (matchId: string, matchStatus: string): Promise<Highlight[]> => {
-  if (matchStatus !== 'LIVE' && matchStatus !== 'FT') {
+export const getMatchHighlights = cache(async (matchDetails: MatchDetails): Promise<Highlight[]> => {
+  // Only search YouTube for finished matches and if the API key is present.
+  if (matchDetails.status !== 'FT' || !YOUTUBE_API_KEY) {
     return []; 
   }
-  // NOTE: This endpoint is a best-guess based on standard API design.
-  // You must verify this against the official Highlightly API documentation.
-  const endpoint = `/football/videos?fixture=${matchId}`;
-  
-  const highlights = await fetchFromHighlightlyApi<Highlight[]>(endpoint, 60);
-  return highlights || [];
+
+  // Build a high-quality search query to get relevant results.
+  const homeTeam = matchDetails.homeTeam.name;
+  const awayTeam = matchDetails.awayTeam.name;
+  const year = new Date(matchDetails.fixture.date).getFullYear(); 
+  const searchQuery = `${homeTeam} vs ${awayTeam} ${year} highlights`;
+
+  const params = new URLSearchParams({
+    part: 'snippet',
+    q: searchQuery,
+    key: YOUTUBE_API_KEY,
+    type: 'video',
+    maxResults: '5',
+    videoEmbeddable: 'true',
+  });
+
+  const url = `${YOUTUBE_API_URL}?${params.toString()}`;
+
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 3600 * 24 } // Cache results for 24 hours
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('[YouTube API] Error:', errorData.error.message);
+      return [];
+    }
+
+    const result = await response.json();
+    
+    // Map the YouTube API response to our app's internal `Highlight` type.
+    if (result.items && result.items.length > 0) {
+      return result.items.map((item: any): Highlight => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        embedUrl: `https://www.youtube.com/embed/${item.id.videoId}`
+      }));
+    }
+
+    return []; // Return an empty array if YouTube's search finds nothing.
+
+  } catch (error) {
+    console.error('[YouTube API] A critical fetch error occurred:', error);
+    return [];
+  }
 });
 
 
 // ==================================================================
-// === NEWS API FUNCTIONS (For Server-Side Use)                   ===
+// === NEWS API FUNCTIONS (No Changes)                            ===
 // ==================================================================
 const NEWS_API_BASE_URL = "https://news.todaylivescores.com";
 
@@ -316,4 +326,179 @@ export const fetchNewsBySlug = cache(async (slug: string): Promise<NewsArticleDe
     console.error(`Error fetching news article by slug '${slug}':`, error);
     return null;
   }
+});
+
+export const fetchMatchLineups = cache(async (fixtureId: string): Promise<MatchLineupData | null> => {
+  if (!FOOTBALL_API_KEY) return null;
+
+  try {
+    const response = await fetch(`${FOOTBALL_API_URL}/fixtures/lineups?fixture=${fixtureId}`, footballServerOptions);
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    if (!data.response || data.response.length < 2) {
+      return null; // We need lineups for both teams
+    }
+
+    // The API returns an array, usually with the home team first.
+    // We'll process them into a more structured home/away object.
+    const homeLineupData = data.response[0];
+    const awayLineupData = data.response[1];
+
+    const processLineup = (lineupData: any): Lineup => {
+      return {
+        team: {
+          id: lineupData.team.id,
+          name: lineupData.team.name,
+          logo: lineupData.team.logo,
+        },
+        formation: lineupData.formation,
+        startXI: lineupData.startXI.map((p: any) => p.player),
+        substitutes: lineupData.substitutes.map((p: any) => p.player),
+      };
+    };
+
+    const lineups: MatchLineupData = {
+      home: processLineup(homeLineupData),
+      away: processLineup(awayLineupData),
+    };
+
+    return lineups;
+  } catch (error) {
+    console.error(`Error fetching lineups for fixture ${fixtureId}:`, error);
+    return null;
+  }
+});
+
+
+export interface DailyPageData {
+  liveWithStreams: { match: Match; stream: Highlight | null }[]; // Changed from liveMatches
+  upcomingMatches: Match[];
+  finishedWithHighlights: { match: Match; highlight: Highlight }[];
+}
+export const fetchDailyMatchesAndHighlights = cache(async (date: string): Promise<DailyPageData> => {
+  // 1. Fetch all fixtures for the date (no change here)
+  const fixturesResponse = await fetch(`${FOOTBALL_API_URL}/fixtures?date=${date}`, footballServerOptions);
+  if (!fixturesResponse.ok) {
+    return { liveWithStreams: [], upcomingMatches: [], finishedWithHighlights: [] };
+  }
+  const fixturesData = await fixturesResponse.json();
+  const allFixtures: ApiFixture[] = fixturesData.response || [];
+
+  // 2. Categorize and process in parallel
+  const liveMatchPromises = [];
+  const upcomingMatches: Match[] = [];
+  const finishedHighlightPromises = [];
+
+  for (const fixture of allFixtures) {
+    const match = mapApiFixtureToMatch(fixture);
+    if (!match) continue;
+
+    if (match.status === 'LIVE' || match.status === 'HT') {
+      // For live matches, create a promise to search for a stream
+      liveMatchPromises.push(
+        searchForLiveStream(match).then(stream => ({ match, stream }))
+      );
+    } else if (match.status === 'UPCOMING') {
+      upcomingMatches.push(match);
+    } else if (match.status === 'FT') {
+      // For finished matches, create a promise to search for highlights (your existing logic)
+      finishedHighlightPromises.push(
+         getMatchHighlights({ ...match, fixture: fixture.fixture }).then(highlights => {
+             // We now only care about the first highlight found
+             if (highlights && highlights.length > 0) {
+                 return { match, highlight: highlights[0] };
+             }
+             return null;
+         })
+      );
+    }
+  }
+
+  // 3. Wait for all API calls to YouTube to complete
+  const liveWithStreams = await Promise.all(liveMatchPromises);
+  const finishedWithHighlights = (await Promise.all(finishedHighlightPromises)).filter(Boolean);
+
+  return {
+    liveWithStreams,
+    upcomingMatches,
+    finishedWithHighlights
+  };
+});
+
+export const fetchLiveMatches = cache(async (): Promise<Match[]> => {
+  if (!FOOTBALL_API_KEY) return [];
+  try {
+    const response = await fetch(`${FOOTBALL_API_URL}/fixtures?live=all`, footballServerOptions);
+    if (!response.ok) {
+      console.error("Failed to fetch live matches from Football API");
+      return [];
+    }
+    
+    const data = await response.json();
+    const liveFixtures: ApiFixture[] = data.response || [];
+    
+    // Use the existing mapApiFixtureToMatch to ensure consistent data structure
+    return liveFixtures.map(mapApiFixtureToMatch).filter((m): m is Match => m !== null);
+  } catch (error) {
+    console.error("Error in fetchLiveMatches:", error);
+    return [];
+  }
+});
+
+
+export const searchForLiveStream = cache(async (match: Match): Promise<Highlight | null> => {
+  if (!YOUTUBE_API_KEY) return null;
+
+  // Build a search query specifically for live streams
+  const searchQuery = `${match.homeTeam.name} vs ${match.awayTeam.name} live stream`;
+
+  const params = new URLSearchParams({
+    part: 'snippet',
+    q: searchQuery,
+    key: YOUTUBE_API_KEY,
+    type: 'video',
+    eventType: 'live', // <-- This is the crucial parameter for live streams
+    maxResults: '1',
+  });
+
+  const url = `${YOUTUBE_API_URL}?${params.toString()}`;
+
+  try {
+    // We don't cache live stream search results for long
+    const response = await fetch(url, { next: { revalidate: 60 * 5 } }); // Cache for 5 mins
+    if (!response.ok) return null;
+
+    const result = await response.json();
+    if (result.items && result.items.length > 0) {
+      const item = result.items[0];
+      return {
+        id: item.id.videoId,
+        title: item.snippet.title,
+        embedUrl: `https://www.youtube.com/embed/${item.id.videoId}`,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error(`[YouTube Live Search] Error for match ${match.id}:`, error);
+    return null;
+  }
+});
+
+
+export const getLiveStreamForMatch = cache(async (matchId: string): Promise<Highlight | null> => {
+  // 1. Fetch the match details first.
+  // Because `fetchMatchDetailsById` is also cached, this call is automatically
+  // de-duplicated by Next.js and will not cause a second network request on the page.
+  const matchDetails = await fetchMatchDetailsById(matchId);
+
+  // 2. If we can't get the match details, we can't search for a stream.
+  if (!matchDetails) {
+    console.error(`[getLiveStreamForMatch] Could not find match details for ID: ${matchId}`);
+    return null;
+  }
+  
+  // 3. Use your existing `searchForLiveStream` function with the fetched details.
+  // This reuses your code and keeps the YouTube search logic in one place.
+  return searchForLiveStream(matchDetails);
 });
