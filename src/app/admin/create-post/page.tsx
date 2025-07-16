@@ -9,12 +9,15 @@ import { IPost, ICategory, ITag } from '@/models/Post';
 import CreatableSelect from 'react-select/creatable';
 import { MultiValue } from 'react-select';
 
+// --- Type Definitions ---
 interface SelectOption { value: string; label: string; }
 type BlockType = 'h1' | 'h2' | 'h3' | 'p' | 'image' | 'ctaButton';
 interface ContentBlock { id: string; type: BlockType; value: any; }
 
+// --- UI Components ---
 const LoadingSpinner = () => <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-blue-500"></div>;
 const RichParagraphEditor = dynamic(() => import('@/components/RichParagraphEditor'), { ssr: false, loading: () => <p className="p-2 bg-gray-700 rounded-md">Loading editor...</p> });
+const SuccessModal = ({ isOpen, onClose, message }: { isOpen: boolean, onClose: () => void, message: string }) => { if (!isOpen) return null; return (<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}><div className="bg-gray-800 p-8 rounded-lg shadow-xl text-center" onClick={e => e.stopPropagation()}><h2 className="text-2xl font-bold text-green-400 mb-4">Success!</h2><p className="text-white mb-6">{message}</p><button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded">Close</button></div></div>); };
 
 const ImageUploader = ({ value, onUpdate, setFormError }: { value: { url?: string, caption?: string }, onUpdate: (newValues: object) => void, setFormError: (msg: string | null) => void }) => { 
     const [isUploading, setIsUploading] = useState(false); 
@@ -48,12 +51,7 @@ function SortableBlock({ block, onUpdate, onDelete, setFormError }: { block: Con
 }
 
 const PublishedPostsTable = ({ posts, isLoading, onEdit, onDelete }: { posts: IPost[], isLoading: boolean, onEdit: (post: IPost) => void, onDelete: (id: string) => void }) => (
-    <div className="mt-12 lg:mt-0 p-4 bg-gray-800 rounded-lg"><h2 className="text-2xl font-bold mb-4">Published Posts</h2><div className="overflow-x-auto relative">{isLoading && <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-10"><LoadingSpinner /></div>}<table className="w-full text-sm text-left text-gray-400"><thead className="text-xs text-gray-300 uppercase bg-gray-700"><tr><th scope="col" className="px-6 py-3">Title</th><th scope="col" className="px-6 py-3">Date Published</th><th scope="col" className="px-6 py-3 text-right">Actions</th></tr></thead><tbody>{posts.length === 0 && !isLoading ? (<tr><td colSpan={3} className="px-6 py-10 text-center text-gray-500">No posts found.</td></tr>) 
-                    : (posts.map((post) => (<tr key={post._id.toString()} className="bg-gray-800 border-b border-gray-700 hover:bg-gray-600"><th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap">{post.title}</th><td className="px-6 py-4">{new Date(post.createdAt).toLocaleDateString()}</td><td className="px-6 py-4 text-right space-x-4"><button onClick={() => onEdit(post)} className="font-medium text-blue-500 hover:underline disabled:text-gray-500" disabled={isLoading}>Edit</button><button onClick={() => onDelete(post._id.toString())} className="font-medium text-red-500 hover:underline disabled:text-gray-500" disabled={isLoading}>Delete</button></td></tr>)))}
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <div className="mt-12 lg:mt-0 p-4 bg-gray-800 rounded-lg"><h2 className="text-2xl font-bold mb-4">Published Posts</h2><div className="overflow-x-auto relative">{isLoading && <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-10"><LoadingSpinner /></div>}<table className="w-full text-sm text-left text-gray-400"><thead className="text-xs text-gray-300 uppercase bg-gray-700"><tr><th scope="col" className="px-6 py-3">Title</th><th scope="col" className="px-6 py-3">Date Published</th><th scope="col" className="px-6 py-3 text-right">Actions</th></tr></thead><tbody>{posts.length === 0 && !isLoading ? (<tr><td colSpan={3} className="px-6 py-10 text-center text-gray-500">No posts found.</td></tr>) : (posts.map((post) => (<tr key={post._id.toString()} className="bg-gray-800 border-b border-gray-700 hover:bg-gray-600"><th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap">{post.title}</th><td className="px-6 py-4">{new Date(post.createdAt).toLocaleDateString()}</td><td className="px-6 py-4 text-right space-x-4"><button onClick={() => onEdit(post)} className="font-medium text-blue-500 hover:underline disabled:text-gray-500" disabled={isLoading}>Edit</button><button onClick={() => onDelete(post._id.toString())} className="font-medium text-red-500 hover:underline disabled:text-gray-500" disabled={isLoading}>Delete</button></td></tr>)))}</tbody></table></div></div>
 );
 
 const CreatePostPage = () => {
@@ -62,6 +60,8 @@ const CreatePostPage = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [posts, setPosts] = useState<IPost[]>([]);
     const [isPostsLoading, setIsPostsLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
     const [editingPostId, setEditingPostId] = useState<string | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [allCategories, setAllCategories] = useState<SelectOption[]>([]);
@@ -69,6 +69,7 @@ const CreatePostPage = () => {
     const [title, setTitle] = useState('');
     const [slug, setSlug] = useState('');
     const [author, setAuthor] = useState('');
+    const [description, setDescription] = useState('');
     const [selectedCategories, setSelectedCategories] = useState<MultiValue<SelectOption>>([]);
     const [selectedTags, setSelectedTags] = useState<MultiValue<SelectOption>>([]);
     const [featuredImageUrl, setFeaturedImageUrl] = useState('');
@@ -105,14 +106,10 @@ const CreatePostPage = () => {
             if (response.ok || response.status === 409) {
                 const newOption = { value: newData._id.toString(), label: newData.name };
                 if (type === 'categories') {
-                    if (!allCategories.some(c => c.value === newOption.value)) {
-                        setAllCategories(prev => [...prev, newOption]);
-                    }
+                    if (!allCategories.some(c => c.value === newOption.value)) { setAllCategories(prev => [...prev, newOption]); }
                     setSelectedCategories(prev => [...prev.filter(c => c.value !== newOption.value), newOption]);
                 } else {
-                    if (!allTags.some(t => t.value === newOption.value)) {
-                        setAllTags(prev => [...prev, newOption]);
-                    }
+                    if (!allTags.some(t => t.value === newOption.value)) { setAllTags(prev => [...prev, newOption]); }
                     setSelectedTags(prev => [...prev.filter(t => t.value !== newOption.value), newOption]);
                 }
             } else { setFormError(`Error creating ${type.slice(0, -1)}: ${newData.message}`); }
@@ -129,7 +126,7 @@ const CreatePostPage = () => {
     const handleDragEnd = (event: any) => { const { active, over } = event; if (over && active.id !== over.id) { setContent(items => { const oldIndex = items.findIndex(i => i.id === active.id); const newIndex = items.findIndex(i => i.id === over.id); return arrayMove(items, oldIndex, newIndex); }); } };
     
     const resetForm = () => {
-        setTitle(''); setSlug(''); setAuthor(''); setFeaturedImageUrl(''); setContent([]); 
+        setTitle(''); setSlug(''); setAuthor(''); setFeaturedImageUrl(''); setContent([]); setDescription('');
         setSelectedCategories([]); setSelectedTags([]); setEditingPostId(null); setFormError(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -137,6 +134,7 @@ const CreatePostPage = () => {
     const handleLoadPostForEdit = (post: IPost) => {
         setEditingPostId(post._id.toString());
         setTitle(post.title); setSlug(post.slug); setAuthor(post.author);
+        setDescription(post.description || '');
         setFeaturedImageUrl(post.featuredImageUrl || ''); setContent(post.content);
         const postCategoryIds = (post.categories as any[]).map(c => typeof c === 'string' ? c : c._id.toString());
         const postTagIds = (post.tags as any[]).map(t => typeof t === 'string' ? t : t._id.toString());
@@ -147,7 +145,7 @@ const CreatePostPage = () => {
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setIsSubmitting(true); setFormError(null);
-        const body = { title, slug, author, featuredImageUrl, content, categories: selectedCategories.map(c => c.value), tags: selectedTags.map(t => t.value) };
+        const body = { title, slug, author, description, featuredImageUrl, content, categories: selectedCategories.map(c => c.value), tags: selectedTags.map(t => t.value) };
         const isUpdating = !!editingPostId;
         const url = isUpdating ? `/api/posts/${editingPostId}` : '/api/posts';
         const method = isUpdating ? 'PUT' : 'POST';
@@ -155,8 +153,12 @@ const CreatePostPage = () => {
             const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             const data = await response.json();
             if (response.ok) {
-                alert(`Post successfully ${isUpdating ? 'updated' : 'published'}!`);
-                resetForm();
+                setModalMessage(`Post successfully ${isUpdating ? 'updated' : 'published'}!`);
+                setIsModalOpen(true);
+                // FIX: Only reset the form if we are creating a NEW post.
+                if (!isUpdating) {
+                    resetForm();
+                }
                 await fetchInitialData();
             } else { setFormError(data.message || 'An error occurred.'); }
         } catch (error) { setFormError('A network error occurred.');
@@ -169,7 +171,8 @@ const CreatePostPage = () => {
         try { 
             const response = await fetch(`/api/posts/${postId}`, { method: 'DELETE' }); 
             if (response.ok) {
-                alert("Post deleted successfully.");
+                setModalMessage("Post deleted successfully.");
+                setIsModalOpen(true);
                 await fetchInitialData();
             } else {
                 const data = await response.json();
@@ -184,28 +187,32 @@ const CreatePostPage = () => {
     const selectStyles = { control: (s:any) => ({...s, backgroundColor: '#4a5568', border: '1px solid #718096'}), multiValue: (s:any) => ({...s, backgroundColor: '#2d3748'}), multiValueLabel: (s:any) => ({...s, color: '#e2e8f0'}), multiValueRemove: (s:any) => ({...s, color: '#cbd5e0', ':hover': { backgroundColor: '#e53e3e', color: 'white'}}), option: (s:any, {isFocused}:any) => ({...s, backgroundColor: isFocused ? '#2d3748' : '#4a5568', color: '#e2e8f0'}), menu: (s:any) => ({...s, backgroundColor: '#4a5568'}) };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
-            <div className="max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-8">
-                <div className="lg:col-span-1">
-                    <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold">{editingPostId ? 'Edit Post' : 'Create New Post'}</h1>{editingPostId && (<button onClick={resetForm} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">+ Create New</button>)}</div>
-                    {formError && <div className="mb-4 p-3 rounded bg-red-800 text-white"><p className="font-bold">Error</p><p>{formError}</p></div>}
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="p-4 bg-gray-800 rounded-lg space-y-4">
-                            <h2 className="text-xl font-semibold">Post Details</h2>
-                            <div><label className="block text-sm mb-1">Title</label><input type="text" value={title} onChange={handleTitleChange} required className="w-full p-2 rounded bg-gray-700 border-gray-600" /></div>
-                            <div><label className="block text-sm mb-1">Featured Image</label><ImageUploader value={{url: featuredImageUrl, caption: ''}} onUpdate={(v: any) => setFeaturedImageUrl(v.url)} setFormError={setFormError} /></div>
-                            <div><label className="block text-sm mb-1">Slug</label><input type="text" value={slug} onChange={e => setSlug(e.target.value)} required className="w-full p-2 rounded bg-gray-700" /></div>
-                            <div><label className="block text-sm mb-1">Author</label><input type="text" value={author} onChange={e => setAuthor(e.target.value)} required className="w-full p-2 rounded bg-gray-700" /></div>
-                            <div><label className="block text-sm mb-1">Categories</label><CreatableSelect instanceId="categories-select" isMulti options={allCategories} value={selectedCategories} onChange={(v) => setSelectedCategories(v)} onCreateOption={(val) => handleCreateOption(val, 'categories')} isDisabled={isCreating || isPostsLoading} isLoading={isCreating} styles={selectStyles} className="text-black" /></div>
-                            <div><label className="block text-sm mb-1">Tags</label><CreatableSelect instanceId="tags-select" isMulti options={allTags} value={selectedTags} onChange={(v) => setSelectedTags(v)} onCreateOption={(val) => handleCreateOption(val, 'tags')} isDisabled={isCreating || isPostsLoading} isLoading={isCreating} styles={selectStyles} className="text-black" /></div>
-                        </div>
-                        <div className="p-4 bg-gray-800 rounded-lg"><h2 className="text-xl font-semibold mb-4">Content Builder</h2><DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}><SortableContext items={content} strategy={verticalListSortingStrategy}><div className="space-y-4">{content.map(block => <SortableBlock key={block.id} block={block} onUpdate={updateBlock} onDelete={deleteBlock} setFormError={setFormError} />)}</div></SortableContext></DndContext><div className="mt-6 border-t border-gray-600 pt-4 flex flex-wrap gap-3"><button type="button" onClick={() => addBlock('h1')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add H1</button><button type="button" onClick={() => addBlock('h2')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add H2</button><button type="button" onClick={() => addBlock('h3')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add H3</button><button type="button" onClick={() => addBlock('p')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add Paragraph</button><button type="button" onClick={() => addBlock('image')} className="px-3 py-2 text-sm bg-indigo-600 rounded">Add Image</button><button type="button" onClick={() => addBlock('ctaButton')} className="px-3 py-2 text-sm bg-indigo-600 rounded">Add CTA Button</button></div></div>
-                        <button type="submit" disabled={isSubmitting || isPostsLoading} className="w-full bg-green-600 hover:bg-green-700 font-bold py-3 rounded text-lg disabled:bg-gray-500">{isSubmitting ? 'Saving...' : (editingPostId ? 'Update Post' : 'Publish Post')}</button>
-                    </form>
+        <>
+            <SuccessModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} message={modalMessage} />
+            <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
+                <div className="max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-8">
+                    <div className="lg:col-span-1">
+                        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold">{editingPostId ? 'Edit Post' : 'Create New Post'}</h1>{editingPostId && (<button onClick={resetForm} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">+ Create New</button>)}</div>
+                        {formError && <div className="mb-4 p-3 rounded bg-red-800 text-white"><p className="font-bold">Error</p><p>{formError}</p></div>}
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="p-4 bg-gray-800 rounded-lg space-y-4">
+                                <h2 className="text-xl font-semibold">Post Details</h2>
+                                <div><label className="block text-sm mb-1">Title</label><input type="text" value={title} onChange={handleTitleChange} required className="w-full p-2 rounded bg-gray-700 border-gray-600" /></div>
+                                <div><label htmlFor="description" className="block text-sm font-medium mb-1">Meta Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="A short summary for SEO..."></textarea></div>
+                                <div><label className="block text-sm mb-1">Featured Image</label><ImageUploader value={{url: featuredImageUrl, caption: ''}} onUpdate={(v: any) => setFeaturedImageUrl(v.url)} setFormError={setFormError} /></div>
+                                <div><label className="block text-sm mb-1">Slug</label><input type="text" value={slug} onChange={e => setSlug(e.target.value)} required className="w-full p-2 rounded bg-gray-700" /></div>
+                                <div><label className="block text-sm mb-1">Author</label><input type="text" value={author} onChange={e => setAuthor(e.target.value)} required className="w-full p-2 rounded bg-gray-700" /></div>
+                                <div><label className="block text-sm mb-1">Categories</label><CreatableSelect instanceId="categories-select" isMulti options={allCategories} value={selectedCategories} onChange={(v) => setSelectedCategories(v)} onCreateOption={(val) => handleCreateOption(val, 'categories')} isDisabled={isCreating || isPostsLoading} isLoading={isCreating} styles={selectStyles} className="text-black" /></div>
+                                <div><label className="block text-sm mb-1">Tags</label><CreatableSelect instanceId="tags-select" isMulti options={allTags} value={selectedTags} onChange={(v) => setSelectedTags(v)} onCreateOption={(val) => handleCreateOption(val, 'tags')} isDisabled={isCreating || isPostsLoading} isLoading={isCreating} styles={selectStyles} className="text-black" /></div>
+                            </div>
+                            <div className="p-4 bg-gray-800 rounded-lg"><h2 className="text-xl font-semibold mb-4">Content Builder</h2><DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}><SortableContext items={content} strategy={verticalListSortingStrategy}><div className="space-y-4">{content.map(block => <SortableBlock key={block.id} block={block} onUpdate={updateBlock} onDelete={deleteBlock} setFormError={setFormError} />)}</div></SortableContext></DndContext><div className="mt-6 border-t border-gray-600 pt-4 flex flex-wrap gap-3"><button type="button" onClick={() => addBlock('h1')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add H1</button><button type="button" onClick={() => addBlock('h2')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add H2</button><button type="button" onClick={() => addBlock('h3')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add H3</button><button type="button" onClick={() => addBlock('p')} className="px-3 py-2 text-sm bg-blue-600 rounded">Add Paragraph</button><button type="button" onClick={() => addBlock('image')} className="px-3 py-2 text-sm bg-indigo-600 rounded">Add Image</button><button type="button" onClick={() => addBlock('ctaButton')} className="px-3 py-2 text-sm bg-indigo-600 rounded">Add CTA Button</button></div></div>
+                            <button type="submit" disabled={isSubmitting || isPostsLoading} className="w-full bg-green-600 hover:bg-green-700 font-bold py-3 rounded text-lg disabled:bg-gray-500">{isSubmitting ? 'Saving...' : (editingPostId ? 'Update Post' : 'Publish Post')}</button>
+                        </form>
+                    </div>
+                    <div className="lg:col-span-1"><PublishedPostsTable posts={posts} isLoading={isPostsLoading} onEdit={handleLoadPostForEdit} onDelete={handleDelete} /></div>
                 </div>
-                <div className="lg:col-span-1"><PublishedPostsTable posts={posts} isLoading={isPostsLoading} onEdit={handleLoadPostForEdit} onDelete={handleDelete} /></div>
             </div>
-        </div>
+        </>
     );
 };
 export default CreatePostPage;

@@ -1,30 +1,30 @@
-import mongoose, { Document, Schema, models } from 'mongoose';
+import mongoose, { Document, Schema, models, Types } from 'mongoose';
+import { ICategory } from './Category';
+import { ITag } from './Tag';
 
-// ... (keep IContentBlock interface)
 export interface IContentBlock { id: string; type: string; value: any; }
 
 export interface IPost extends Document {
+  _id: Types.ObjectId;
   title: string;
   slug: string;
   author: string;
-  // REMOVED: keywords is replaced by tags
-  // keywords: string[];
+  description?: string; // NEW: The meta description field
   featuredImageUrl?: string;
   content: IContentBlock[];
+  categories: (Types.ObjectId | ICategory)[];
+  tags: (Types.ObjectId | ITag)[];
   createdAt: Date;
   updatedAt: Date;
-  // NEW: Add references to Category and Tag models
-  categories: mongoose.Types.ObjectId[];
-  tags: mongoose.Types.ObjectId[];
 }
 
 const PostSchema: Schema = new Schema({
   title: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
   author: { type: String, required: true },
+  description: { type: String }, // NEW: Add to the schema
   featuredImageUrl: { type: String },
   content: { type: Array, required: true },
-  // NEW: Define the references in the schema
   categories: [{ type: Schema.Types.ObjectId, ref: 'Category' }],
   tags: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
 }, { timestamps: true });

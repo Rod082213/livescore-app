@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   // The 'template' will be used by child pages. %s is replaced by the child's title.
   title: {
     default: 'TodayLiveScores', // Title for the homepage or pages without a title
-    template: '%s | TodayLiveScores', // e.g., "Manchester United | TodayLiveScores"
+     // e.g., "Manchester United | TodayLiveScores"
   },
   description: 'Your go-to for live sports scores and statistics.',
 };
