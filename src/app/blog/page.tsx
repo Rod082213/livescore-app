@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import Header from '@/components/Header';
+import SportsNav from '@/components/SportsNav';
+import Footer from '@/components/Footer';
+import BackButton from '@/components/BackButton';
 import Image from 'next/image';
 import { IPost, ICategory, ITag } from '@/models/Post';
 import dbConnect from '@/lib/mongodb';
@@ -94,11 +98,21 @@ export default async function BlogListPage() {
     const { posts, categories, tags } = await getBlogPageData();
 
     return (
-        <div className="bg-gray-900 text-white min-h-screen">
+        <div className="bg-[#1d222d] text-white min-h-screen">
+            
+        <Header />
+           <SportsNav />
             <div className="container mx-auto px-4 py-12">
-                <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-12">
-                    The Blog
-                </h1>
+            
+   
+        <BackButton />
+    
+
+    {/* The title remains perfectly centered in the parent container */}
+    <h1 className="text-4xl md:text-5xl font-extrabold border-b border-gray-700 pb-4 mb-4">
+        Blogs
+    </h1>
+
                 
                 <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-8">
                     <main className="lg:col-span-9">
@@ -119,7 +133,9 @@ export default async function BlogListPage() {
                     <Sidebar categories={categories} tags={tags} />
                 </div>
             </div>
+             <Footer />
         </div>
+        
     );
 }
 

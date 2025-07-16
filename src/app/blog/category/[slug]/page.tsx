@@ -70,9 +70,9 @@ export default async function CategoryArchivePage({ params }: { params: { slug: 
     const { category, posts, allCategories, allTags } = data;
 
     return (
-        <div className="bg-gray-900 text-white min-h-screen">
+        <div className=" text-white min-h-screen">
             <div className="container mx-auto px-4 py-12">
-                <div className="text-center mb-12">
+                <div className="text-center mb-12 ">
                     <p className="text-blue-400 font-semibold uppercase tracking-wider">Category</p>
                     <h1 className="text-4xl md:text-5xl font-extrabold capitalize">{category.name}</h1>
                 </div>

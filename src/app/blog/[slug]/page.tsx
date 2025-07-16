@@ -1,5 +1,9 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
+import Header from '@/components/Header';
+import SportsNav from '@/components/SportsNav';
+import BackToBlogs from '@/components/BackToBlogs';
+import Footer from '@/components/Footer';
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -140,7 +144,9 @@ export default async function BlogPostPage({ params }: { params: { slug:string }
   const tags = post.tags as ITag[];
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen">
+    <div className="bg-[#1d222d] text-white min-h-screen">
+       <Header />
+       <SportsNav />
       <div className="container mx-auto px-4 py-12">
         <div className="lg:grid lg:grid-cols-12 lg:gap-12">
           
@@ -151,6 +157,7 @@ export default async function BlogPostPage({ params }: { params: { slug:string }
           </aside>
 
           <div className="lg:col-span-6">
+            <BackToBlogs />
             <article>
               <header className="mb-8 border-b border-gray-700 pb-6">
                 <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">{post.title}</h1>
@@ -172,6 +179,7 @@ export default async function BlogPostPage({ params }: { params: { slug:string }
           </aside>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
