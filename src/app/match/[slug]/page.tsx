@@ -1,4 +1,5 @@
 // src/app/match/[slug]/page.tsx
+
 import Header from '@/components/Header';
 import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
@@ -10,12 +11,17 @@ import HeadToHead from '@/components/match/HeadToHead';
 import PredictionForm from '@/components/match/PredictionForm';
 import WelcomeOffer from '@/components/match/WelcomeOffer';
 import MatchDescription from '@/components/match/MatchDescription';
-import { fetchMatchDetailsById } from '@/lib/api'; 
 import Link from 'next/link';
+import { fetchMatchDetailsById, getMatchHighlights } from '@/lib/api'; 
+import MatchHighlights from '@/components/match/MatchHighlights';
 
+// The props are destructured directly in the function signature
 export default async function MatchDetailPage({ params }: { params: { slug: string } }) {
   
-  const slugParts = params.slug.split('-');
+  // --- FIX for the Next.js warning ---
+  // We extract the slug from the destructured params
+  const { slug } = params;
+  const slugParts = slug.split('-');
   const matchId = slugParts[slugParts.length - 1];
 
   if (!matchId || isNaN(parseInt(matchId))) {
@@ -28,6 +34,7 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
       );
   }
 
+  // Fetch match details from the football API
   const matchDetails = await fetchMatchDetailsById(matchId);
 
   if (!matchDetails) {
@@ -37,7 +44,7 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
         <SportsNav />
         <main className="container mx-auto px-4 py-6 flex flex-col items-center justify-center text-center h-[50vh]">
             <h1 className="text-4xl font-bold">404 - Match Not Found</h1>
-            <p className="mt-4 text-gray-400">Sorry, we couldn't find the details for this match (ID: {matchId}). It may be from a past season or does not exist.</p>
+            <p className="mt-4 text-gray-400">Sorry, we couldn't find the details for this match (ID: {matchId}).</p>
             <BackButton />
         </main>
         <Footer />
@@ -45,28 +52,31 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
     );
   }
 
+  // Fetch highlights from the highlights API
+  const matchHighlights = await getMatchHighlights(matchId, matchDetails.status);
+
+  // Now we render the page with the real data
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
       <SportsNav />
 
       <main className="container mx-auto px-4 py-6">
-        
         <BackButton />
-
         <MatchHeader match={matchDetails} />
         
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Render both components sequentially. Each handles its own "no data" state. */}
             <MatchTimeline events={matchDetails.events} status={matchDetails.status} />
+
+            {/* This component correctly receives the (potentially empty) highlights array */}
+            <MatchHighlights highlights={matchHighlights} />
+            
             <MatchStatistics 
               statistics={matchDetails.statistics} 
               status={matchDetails.status} 
             />
-
             <HeadToHead 
               h2hData={matchDetails.h2h} 
               teams={{ home: matchDetails.homeTeam, away: matchDetails.awayTeam }} 
@@ -81,9 +91,7 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
             />
             <MatchDescription />
             <WelcomeOffer />
-            
           </div>
-          
         </div>
       </main>
 

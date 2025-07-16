@@ -1,4 +1,4 @@
-// src/app/team/[slug]/page.tsx
+// src/app/team/[slug]/page.tsx (CORRECTED)
 
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
@@ -7,7 +7,7 @@ import {
   fetchTeamFixtures, 
   fetchTeamSquad, 
   fetchStandings,
-  fetchAllTeamsFromAllLeagues // Still needed for generateStaticParams
+  fetchAllTeamsFromAllLeagues 
 } from '@/lib/api';
 import { createTeamSlug } from '@/lib/utils';
 
@@ -22,7 +22,12 @@ import LeagueStandings from '@/components/team/LeagueStandings';
 import SquadList from '@/components/team/SquadList';
 import BacktoTeamLists from "@/components/BacktoTeamLists";
 
-type Props = { params: { slug: string } };
+// Define the type for the destructured params for clarity
+type PageProps = {
+  params: {
+    slug: string;
+  };
+};
 
 // Helper function to extract the ID from a slug like "team-name-123"
 const getTeamIdFromSlug = (slug: string): string | null => {
@@ -31,15 +36,15 @@ const getTeamIdFromSlug = (slug: string): string | null => {
     return /^\d+$/.test(potentialId) ? potentialId : null;
 };
 
-// --- DYNAMIC METADATA NOW USES THE ID DIRECTLY ---
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const teamId = getTeamIdFromSlug(params.slug);
+// --- FIX #1: Destructure `slug` directly in the function signature ---
+export async function generateMetadata({ params: { slug } }: PageProps): Promise<Metadata> {
+  // Now we use the `slug` variable directly, instead of `params.slug`
+  const teamId = getTeamIdFromSlug(slug);
 
   if (!teamId) {
     return { title: 'Invalid Team URL' };
   }
 
-  // Fetch only the info for THIS team. Much more efficient!
   const teamInfo = await fetchTeamInfo(teamId);
   
   if (!teamInfo) {
@@ -53,19 +58,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: dynamicTitle,
     description: dynamicDescription,
-    // ... other metadata fields
   };
 }
 
-// --- PAGE COMPONENT IS NOW MUCH SIMPLER AND MORE RELIABLE ---
-export default async function TeamDetailPage({ params }: Props) {
-  const teamId = getTeamIdFromSlug(params.slug);
+// --- FIX #2: Destructure `slug` directly in the function signature ---
+export default async function TeamDetailPage({ params: { slug } }: PageProps) {
+  // Now we use the `slug` variable directly, instead of `params.slug`
+  const teamId = getTeamIdFromSlug(slug);
 
   if (!teamId) {
-    notFound(); // If the slug format is invalid, show 404
+    notFound(); 
   }
 
-  // Fetch all data for this specific team ID directly.
   const [teamInfo, fixtures, squad] = await Promise.all([
     fetchTeamInfo(teamId),
     fetchTeamFixtures(teamId),
@@ -73,7 +77,7 @@ export default async function TeamDetailPage({ params }: Props) {
   ]);
 
   if (!teamInfo) {
-    notFound(); // If the API returns no team for this ID, show 404
+    notFound(); 
   }
   
   const leagueId = (fixtures && fixtures.length > 0 && fixtures[0].league)
@@ -113,7 +117,7 @@ export default async function TeamDetailPage({ params }: Props) {
   );
 }
 
-// --- generateStaticParams now creates the new slug format ---
+// --- generateStaticParams is correct and needs no changes ---
 export async function generateStaticParams() {
   const allLeagues = await fetchAllTeamsFromAllLeagues();
   const allTeams = allLeagues.flatMap(league => league.teams);

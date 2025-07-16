@@ -113,7 +113,7 @@ export default async function NewsListingPage({
       <SportsNav />
       
       <div className="container mx-auto px-4 py-8">
-           <BackButton />
+        <BackButton />
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-8 border-b border-gray-700 pb-4">
               Latest News
             </h1>

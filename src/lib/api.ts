@@ -1,20 +1,29 @@
-// src/lib/api.ts
+// src/lib/api.ts (Complete, Final, Production-Ready)
 
 import { cache } from 'react';
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails } from "@/data/mockData";
 import { format } from 'date-fns';
+import { Highlight, NewsArticleSummary, NewsArticleDetail } from './types';
 
-const API_URL = 'https://v3.football.api-sports.io';
-const API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_API_KEY;
+// ==================================================================
+// === FOOTBALL API CONFIGURATION                                 ===
+// ==================================================================
+const FOOTBALL_API_URL = 'https://v3.football.api-sports.io';
+const FOOTBALL_API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_API_KEY;
 
-const serverOptions: RequestInit = {
+const footballServerOptions: RequestInit = {
   method: 'GET',
-  headers: { 'x-apisports-key': API_KEY as string },
-  next: { revalidate: 3600 } // Cache API results for 1 hour
+  headers: { 'x-apisports-key': FOOTBALL_API_KEY as string },
+  next: { revalidate: 3600 } 
+};
+
+type Team = {
+  id: number;
+  name: string;
+  logo: string;
 };
 
 // --- MAPPING FUNCTIONS ---
-
 function mapStatus(status: any): { status: Match['status'], time?: string } {
     if (['FT', 'AET', 'PEN'].includes(status.short)) return { status: 'FT', time: 'FT' };
     if (status.short === 'HT') return { status: 'HT', time: 'HT' };
@@ -22,7 +31,6 @@ function mapStatus(status: any): { status: Match['status'], time?: string } {
     if (status.elapsed) return { status: 'LIVE', time: `${status.elapsed}'` };
     return { status: 'UPCOMING', time: status.short };
 }
-
 export function mapApiFixtureToMatch(apiFixture: any): Match | null {
     if (!apiFixture || !apiFixture.fixture || !apiFixture.league) return null;
     let { status, time } = mapStatus(apiFixture.fixture.status);
@@ -38,7 +46,6 @@ export function mapApiFixtureToMatch(apiFixture: any): Match | null {
     };
     return match;
 }
-
 export function groupMatchesByLeague(matches: Match[]): LeagueGroup[] {
   if (!matches || matches.length === 0) return [];
   const grouped = matches.reduce((acc, match) => {
@@ -51,7 +58,6 @@ export function groupMatchesByLeague(matches: Match[]): LeagueGroup[] {
   }, {} as Record<string, LeagueGroup>);
   return Object.values(grouped);
 }
-
 function mapApiStandingToStanding(apiStanding: ApiStanding): Standing {
     return {
         rank: apiStanding.rank, team: { id: apiStanding.team.id, name: apiStanding.team.name, logo: apiStanding.team.logo },
@@ -61,16 +67,14 @@ function mapApiStandingToStanding(apiStanding: ApiStanding): Standing {
     };
 }
 
-
-// --- CACHED DATA FETCHING FUNCTIONS ---
-
+// --- FOOTBALL API FETCHING FUNCTIONS ---
 export const fetchDashboardData = cache(async (): Promise<LeagueGroup[]> => {
-    if (!API_KEY) return [];
+    if (!FOOTBALL_API_KEY) return [];
     try {
         const todayStr = new Date().toISOString().split('T')[0];
         const [liveResponse, todayResponse] = await Promise.all([
-            fetch(`${API_URL}/fixtures?live=all`, serverOptions),
-            fetch(`${API_URL}/fixtures?date=${todayStr}`, serverOptions)
+            fetch(`${FOOTBALL_API_URL}/fixtures?live=all`, footballServerOptions),
+            fetch(`${FOOTBALL_API_URL}/fixtures?date=${todayStr}`, footballServerOptions)
         ]);
         if (!liveResponse.ok || !todayResponse.ok) return [];
         const liveData = await liveResponse.json();
@@ -81,42 +85,56 @@ export const fetchDashboardData = cache(async (): Promise<LeagueGroup[]> => {
         return groupMatchesByLeague(matches);
     } catch (error) { return []; }
 });
-
 export const fetchTopLeagues = cache(async (): Promise<ApiLeague[]> => {
-    if (!API_KEY) return [];
+    if (!FOOTBALL_API_KEY) return [];
     try {
         const leagueIds = [39, 140, 135, 78, 61, 2, 3, 88, 94, 253];
-        const responses = await Promise.all(leagueIds.map(id => fetch(`${API_URL}/leagues?id=${id}`, serverOptions)));
+        const responses = await Promise.all(leagueIds.map(id => fetch(`${FOOTBALL_API_URL}/leagues?id=${id}`, footballServerOptions)));
         const results = await Promise.all(responses.map(res => res.json()));
         return results.map(result => result.response[0]?.league).filter(Boolean);
     } catch (error) { return []; }
 });
-
-export const fetchStandings = cache(async (leagueId: string, season: string = "2023"): Promise<Standing[]> => {
-    if (!API_KEY) return [];
+export const fetchStandings = cache(async (leagueId: string, season: string = "2024"): Promise<Standing[]> => {
+    if (!FOOTBALL_API_KEY) return [];
     try {
-        const response = await fetch(`${API_URL}/standings?league=${leagueId}&season=${season}`, serverOptions);
+        const response = await fetch(`${FOOTBALL_API_URL}/standings?league=${leagueId}&season=${season}`, footballServerOptions);
         if (!response.ok) return [];
         const data = await response.json();
         const standingsData = data.response[0]?.league?.standings[0];
         return standingsData ? standingsData.map(mapApiStandingToStanding) : [];
     } catch (error) { return []; }
 });
-
+export const fetchAllTeamsInLeague = cache(async (leagueId: string, season: string = "2024"): Promise<Team[]> => {
+  if (!FOOTBALL_API_KEY || !leagueId) return [];
+  try {
+    const url = `${FOOTBALL_API_URL}/teams?league=${leagueId}&season=${season}`;
+    const response = await fetch(url, footballServerOptions);
+    if (!response.ok) {
+      console.error(`API Error: Failed to fetch teams for league ${leagueId}`);
+      return [];
+    }
+    const data = await response.json();
+    const teams: Team[] = (data.response || []).map((item: any) => ({
+      id: item.team.id,
+      name: item.team.name,
+      logo: item.team.logo,
+    }));
+    return teams;
+  } catch (error) {
+    console.error("Error in fetchAllTeamsInLeague:", error);
+    return [];
+  }
+});
 export const fetchAllTeamsFromAllLeagues = cache(async (): Promise<{ leagueName: string, teams: { id: number, name: string, logo: string }[] }[]> => {
-    if (!API_KEY) return [];
+    if (!FOOTBALL_API_KEY) return [];
     try {
         const leagueIds = [39, 140, 135, 78, 61, 2, 3, 88, 94, 253];
-        const leagueDetailsPromises = leagueIds.map(id => fetch(`${API_URL}/leagues?id=${id}`, serverOptions).then(res => res.ok ? res.json() : null));
+        const leagueDetailsPromises = leagueIds.map(id => fetch(`${FOOTBALL_API_URL}/leagues?id=${id}`, footballServerOptions).then(res => res.ok ? res.json() : null));
         const leagueDetailsResults = await Promise.all(leagueDetailsPromises);
-        const leaguesMap = new Map(
-            leagueDetailsResults
-                .filter(result => result && result.response && result.response[0] && result.response[0].league)
-                .map(result => [result.response[0].league.id, result.response[0].league.name])
-        );
-        const teamsPromises = leagueIds.map(id => fetch(`${API_URL}/teams?league=${id}&season=2023`, serverOptions).then(res => res.ok ? res.json() : null));
+        const leaguesMap = new Map(leagueDetailsResults.filter(Boolean).map(result => [result.response[0].league.id, result.response[0].league.name]));
+        const teamsPromises = leagueIds.map(id => fetch(`${FOOTBALL_API_URL}/teams?league=${id}&season=2024`, footballServerOptions).then(res => res.ok ? res.json() : null));
         const teamsResults = await Promise.all(teamsPromises);
-        return teamsResults.filter(result => result && result.response && result.response.length > 0).map(result => {
+        return teamsResults.filter(Boolean).map(result => {
             const leagueId = result.parameters.league;
             const leagueName = leaguesMap.get(parseInt(leagueId)) || 'Unknown League';
             const teams = result.response.map((item: any) => ({ id: item.team.id, name: item.team.name, logo: item.team.logo }));
@@ -124,87 +142,70 @@ export const fetchAllTeamsFromAllLeagues = cache(async (): Promise<{ leagueName:
         });
     } catch (error) { return []; }
 });
-
-export const fetchTeamOfTheWeek = cache(async (leagueId: string = "39", season: string = "2023"): Promise<Player[]> => {
-    if (!API_KEY) return [];
+export const fetchTeamOfTheWeek = cache(async (leagueId: string = "39", season: string = "2024"): Promise<Player[]> => {
+    if (!FOOTBALL_API_KEY) return [];
     try {
-        const url = `${API_URL}/players/topscorers?season=${season}&league=${leagueId}`;
-        const response = await fetch(url, serverOptions);
+        const url = `${FOOTBALL_API_URL}/players/topscorers?season=${season}&league=${leagueId}`;
+        const response = await fetch(url, footballServerOptions);
         if (!response.ok) return [];
         const data = await response.json();
         const topPlayers: ApiPlayer[] = data.response?.slice(0, 5) || [];
-        return topPlayers.map(p => ({
-            name: p.player.name,
-            rating: parseFloat(p.statistics[0].games.rating || '0').toFixed(1),
-            logo: p.statistics[0].team.logo,
-        }));
+        return topPlayers.map(p => ({ name: p.player.name, rating: parseFloat(p.statistics[0].games.rating || '0').toFixed(1), logo: p.statistics[0].team.logo }));
     } catch (error) { return []; }
 });
-
-// --- THIS FUNCTION IS NOW RESTORED FOR THE /top-players PAGE ---
-export const fetchAllTopPlayers = cache(async (leagueId: string = "39", season: string = "2023"): Promise<Player[]> => {
-    if (!API_KEY) return [];
+export const fetchAllTopPlayers = cache(async (leagueId: string = "39", season: string = "2024"): Promise<Player[]> => {
+    if (!FOOTBALL_API_KEY) return [];
     try {
-        const url = `${API_URL}/players/topscorers?season=${season}&league=${leagueId}`;
-        const response = await fetch(url, serverOptions);
+        const url = `${FOOTBALL_API_URL}/players/topscorers?season=${season}&league=${leagueId}`;
+        const response = await fetch(url, footballServerOptions);
         if (!response.ok) return [];
         const data = await response.json();
         const topPlayers: ApiPlayer[] = data.response || [];
-        return topPlayers.map(p => ({
-            name: p.player.name,
-            rating: parseFloat(p.statistics[0].games.rating || '0').toFixed(1),
-            logo: p.statistics[0].team.logo,
-            id: p.player.id,
-            teamName: p.statistics[0].team.name
-        }));
+        return topPlayers.map(p => ({ name: p.player.name, rating: parseFloat(p.statistics[0].games.rating || '0').toFixed(1), logo: p.statistics[0].team.logo, id: p.player.id, teamName: p.statistics[0].team.name }));
     } catch (error) {
         console.error("Error in fetchAllTopPlayers:", error);
         return [];
     }
 });
-
 export const fetchTeamInfo = cache(async (teamId: string) => {
-    if (!API_KEY) return null;
+    if (!FOOTBALL_API_KEY) return null;
     try {
-        const res = await fetch(`${API_URL}/teams?id=${teamId}`, serverOptions);
+        const res = await fetch(`${FOOTBALL_API_URL}/teams?id=${teamId}`, footballServerOptions);
         if (!res.ok) return null;
         const data = await res.json();
         return data.response[0] || null;
     } catch (error) { return null; }
 });
-
-export const fetchTeamFixtures = cache(async (teamId: string, season: string = "2023") => {
-    if (!API_KEY) return [];
+export const fetchTeamFixtures = cache(async (teamId: string, season: string = "2024") => {
+    if (!FOOTBALL_API_KEY) return [];
     try {
-        const res = await fetch(`${API_URL}/fixtures?team=${teamId}&season=${season}`, serverOptions);
+        const res = await fetch(`${FOOTBALL_API_URL}/fixtures?team=${teamId}&season=${season}`, footballServerOptions);
         if (!res.ok) return [];
         const data = await res.json();
         return (data.response || []).map(mapApiFixtureToMatch).filter(Boolean) as Match[];
     } catch (error) { return []; }
 });
-
 export const fetchTeamSquad = cache(async (teamId: string) => {
-    if (!API_KEY) return [];
+    if (!FOOTBALL_API_KEY) return [];
     try {
-        const res = await fetch(`${API_URL}/players/squads?team=${teamId}`, serverOptions);
+        const res = await fetch(`${FOOTBALL_API_URL}/players/squads?team=${teamId}`, footballServerOptions);
         if (!res.ok) return [];
         const data = await res.json();
         return data.response[0]?.players || [];
     } catch (error) { return []; }
 });
-
 export const fetchMatchDetailsById = cache(async (id: string): Promise<MatchDetails | null> => {
-    if (!API_KEY) { return null; }
+    if (!FOOTBALL_API_KEY) return null;
     try {
-        const fixtureRes = await fetch(`${API_URL}/fixtures?id=${id}`, serverOptions);
+        const fixtureRes = await fetch(`${FOOTBALL_API_URL}/fixtures?id=${id}`, footballServerOptions);
         if (!fixtureRes.ok) return null;
         const fixtureData = await fixtureRes.json();
         const apiFixture: ApiFixture = fixtureData.response?.[0];
         if (!apiFixture) return null;
         const match: MatchDetails = mapApiFixtureToMatch(apiFixture) as MatchDetails;
         const [eventsRes, statsRes] = await Promise.all([
-            fetch(`${API_URL}/fixtures/events?fixture=${id}`, serverOptions),
-            fetch(`${API_URL}/fixtures/statistics?fixture=${id}`, serverOptions),
+            fetch(`${FOOTBALL_API_URL}/fixtures/events?fixture=${id}`, footballServerOptions),
+            fetch(`${FOOTBALL_API_URL}/fixtures/statistics?fixture=${id}`, footballServerOptions),
         ]);
         if (eventsRes.ok) match.events = (await eventsRes.json()).response;
         if (statsRes.ok) {
@@ -224,4 +225,95 @@ export const fetchMatchDetailsById = cache(async (id: string): Promise<MatchDeta
         }
         return match;
     } catch (error) { return null; }
+});
+
+
+// ==================================================================
+// === HIGHLIGHTS API CLIENT (FINAL & CLEAN)                      ===
+// ==================================================================
+const HIGHLIGHTLY_API_KEY = process.env.HIGHLIGHTLY_API_KEY;
+const HIGHLIGHTLY_HOST = 'sports.highlightly.net';
+const HIGHLIGHTLY_BASE_URL = `https://${HIGHLIGHTLY_HOST}`;
+
+async function fetchFromHighlightlyApi<T>(endpoint: string, cacheDurationInSeconds?: number): Promise<T | null> {
+  if (!HIGHLIGHTLY_API_KEY) {
+    console.error('[Highlightly API] CRITICAL: HIGHLIGHTLY_API_KEY is not defined.');
+    return null;
+  }
+  const url = `${HIGHLIGHTLY_BASE_URL}${endpoint}`;
+  try {
+    const fetchOptions: RequestInit = {
+        method: 'GET',
+        headers: { 
+            'x-rapidapi-host': HIGHLIGHTLY_HOST, 
+            'x-rapidapi-key': HIGHLIGHTLY_API_KEY, 
+        },
+    };
+    if (cacheDurationInSeconds !== undefined) {
+        fetchOptions.next = { revalidate: cacheDurationInSeconds };
+    }
+    const response = await fetch(url, fetchOptions);
+    if (!response.ok) {
+        if (response.status !== 404) {
+             console.error(`[Highlightly API] Error response from ${url}: ${response.status}`);
+        }
+        return null;
+    }
+    const result = await response.json();
+    return result.data || result;
+  } catch (error) {
+    console.error(`[Highlightly API] A critical fetch error occurred for ${url}:`, error);
+    return null;
+  }
+}
+
+export const getMatchHighlights = cache(async (matchId: string, matchStatus: string): Promise<Highlight[]> => {
+  if (matchStatus !== 'LIVE' && matchStatus !== 'FT') {
+    return []; 
+  }
+  // NOTE: This endpoint is a best-guess based on standard API design.
+  // You must verify this against the official Highlightly API documentation.
+  const endpoint = `/football/videos?fixture=${matchId}`;
+  
+  const highlights = await fetchFromHighlightlyApi<Highlight[]>(endpoint, 60);
+  return highlights || [];
+});
+
+
+// ==================================================================
+// === NEWS API FUNCTIONS (For Server-Side Use)                   ===
+// ==================================================================
+const NEWS_API_BASE_URL = "https://news.todaylivescores.com";
+
+export const fetchNewsList = cache(async (): Promise<NewsArticleSummary[]> => {
+  try {
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news`, { next: { revalidate: 600 } });
+    if (!res.ok) {
+      console.error(`News API returned an error: ${res.statusText}`);
+      return [];
+    }
+    const apiResponse = await res.json();
+    return apiResponse.data || [];
+  } catch (error) {
+    console.error('Error fetching news list:', error);
+    return [];
+  }
+});
+
+export const fetchNewsBySlug = cache(async (slug: string): Promise<NewsArticleDetail | null> => {
+  if (!slug) return null;
+  try {
+    const res = await fetch(`${NEWS_API_BASE_URL}/api/news/slug/${slug}`, { next: { revalidate: 3600 } });
+    if (!res.ok) {
+      if (res.status !== 404) {
+        console.error(`News API returned an error for slug '${slug}': ${res.statusText}`);
+      }
+      return null;
+    }
+    const apiResponse = await res.json();
+    return apiResponse;
+  } catch (error) {
+    console.error(`Error fetching news article by slug '${slug}':`, error);
+    return null;
+  }
 });

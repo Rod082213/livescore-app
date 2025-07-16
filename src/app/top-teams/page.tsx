@@ -1,16 +1,17 @@
-// src/app/top-teams/page.tsx
+// src/app/top-teams/page.tsx (CORRECTED)
 
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { fetchAllTeamsInLeague } from '@/lib/api'; // Use the function we created
+import { fetchAllTeamsInLeague } from '@/lib/api'; 
+// --- FIX #1: Import the slug creation utility ---
+import { createTeamSlug } from '@/lib/utils'; 
 
-// Notice we are using `searchParams` here instead of `params`
-export default async function TopTeamsPage({ searchParams }: { searchParams: { leagueId: string } }) {
+export default async function TopTeamsPage({ searchParams }: { searchParams: { leagueId?: string } }) {
   
-  // Get the leagueId from the URL's query parameter
-  const leagueId = searchParams.leagueId;
+  // Default to a popular league (e.g., Premier League ID 39) if none is provided
+  const leagueId = searchParams.leagueId || '39';
 
   // Fetch the teams for that specific league
   const teams = await fetchAllTeamsInLeague(leagueId);
@@ -24,9 +25,10 @@ export default async function TopTeamsPage({ searchParams }: { searchParams: { l
         {teams && teams.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {teams.map((team) => (
+              // --- FIX #2: Use createTeamSlug to build the correct href ---
               <Link 
                 key={team.id}
-                href={`/team/${team.id}`} // This can link to your team detail page
+                href={`/team/${createTeamSlug(team.name, team.id)}`}
                 className="group bg-[#2b3341] p-4 rounded-lg flex flex-col items-center justify-center text-center hover:bg-[#3e4859] transition-colors"
               >
                 <Image

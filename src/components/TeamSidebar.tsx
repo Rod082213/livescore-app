@@ -3,8 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 // import AdCarousel from "./AdCarousel";
-import { ChallengeWidget } from "@/components/features/challenge/ChallengeWidget";
-import { ChallengeModal } from "@/components/features/challenge/ChallengeModal";
+
 
 
 
@@ -29,9 +28,7 @@ const RightSidebar = ({
                 <div className="space-y-4">
                     
                     
-                    <div onClick={() => setIsModalOpen(true)}>
-                      <ChallengeWidget />
-                    </div>
+                
                      <div className="bg-[#2b3341] rounded-lg p-6 mt-4">
             <h3 className="text-lg font-bold text-white mb-2">All Teams</h3>
               <p className="text-sm text-gray-300 mb-4">Celebrate the best performers from<span className="text-blue-400 font-bold"> this week’s action!</span> Explore our Team of the Week for Premier league, champions league, La liga and more to see which players dominated the pitch with goals, assists, clean sheets, and match-winning moments. Updated after every gameweek!</p>
@@ -47,12 +44,7 @@ const RightSidebar = ({
                 
             </aside>
 
-            <ChallengeModal 
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              hasSubmitted={hasSubmittedChallenge}
-              isChallengeOver={isChallengeOver}
-            />
+            
 
         
         </>

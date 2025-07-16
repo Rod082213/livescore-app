@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell } from 'lucide-react';
+import { Bell, Loader2 } from 'lucide-react';
 import { NewsArticleSummary } from '@/lib/types';
 import { fetchNewsList } from '@/lib/news-api';
 
@@ -13,37 +13,33 @@ const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [news, setNews] = useState<NewsArticleSummary[]>([]);
   const [hasNew, setHasNew] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Function to check for new news
     const checkForNewNews = async () => {
       try {
         const latestNews = await fetchNewsList();
         if (latestNews && latestNews.length > 0) {
-          setNews(latestNews.slice(0, 5)); // Keep the top 5 for the dropdown
-
-          // Check if there's news the user hasn't seen
+          setNews(latestNews.slice(0, 5)); 
           const lastSeenArticleId = localStorage.getItem('lastSeenArticleId');
           const latestArticleId = latestNews[0].id || latestNews[0]._id;
-
-          if (latestArticleId !== lastSeenArticleId) {
+          if (latestArticleId && latestArticleId !== lastSeenArticleId) {
             setHasNew(true);
           }
         }
       } catch (error) {
         console.error("Failed to fetch news for notification bell:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // Check immediately on mount, then poll every 60 seconds
     checkForNewNews();
-    const interval = setInterval(checkForNewNews, 60000); // 60 seconds
-
+    const interval = setInterval(checkForNewNews, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Effect to close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -56,8 +52,7 @@ const NotificationBell = () => {
 
   const handleBellClick = () => {
     setIsOpen(!isOpen);
-    // When the user opens the dropdown, mark the latest news as "seen"
-    if (news.length > 0) {
+    if (hasNew && news.length > 0) {
       const latestArticleId = news[0].id || news[0]._id;
       localStorage.setItem('lastSeenArticleId', latestArticleId);
       setHasNew(false);
@@ -65,21 +60,43 @@ const NotificationBell = () => {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button onClick={handleBellClick} className="relative p-2 text-gray-300 hover:text-white">
+    <div className="relative md:static" ref={dropdownRef}>
+      <button 
+        onClick={handleBellClick} 
+        className="relative p-2 text-gray-300 hover:text-white transition-colors"
+        aria-label="View notifications"
+      >
         <Bell size={24} />
         {hasNew && (
-          <span className="absolute top-2 right-2 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-gray-800" />
+          <span className="absolute top-2 right-2 flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+          </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-[#2b3341] rounded-lg shadow-lg border border-gray-700 z-50">
-          <div className="p-3 border-b border-gray-700">
+        // --- THIS IS THE RESPONSIVE FIX ---
+        // On mobile (default): It's a fixed, full-width modal at the top of the screen.
+        // On medium screens and up (`md:`): It becomes an absolute-positioned dropdown.
+        <div 
+          className="
+            fixed top-16 left-0 w-full bg-[#1d222d] border-b border-gray-700 z-50
+            md:absolute md:top-full md:left-auto md:right-0 md:mt-2 md:w-96 md:rounded-lg md:border
+          "
+        >
+          <div className="flex justify-between items-center p-3 border-b border-gray-700">
             <h3 className="font-semibold text-white">Latest News</h3>
+            <Link href="/news" className="text-xs text-blue-400 hover:underline" onClick={() => setIsOpen(false)}>
+              View All
+            </Link>
           </div>
-          <ul className="py-1 max-h-96 overflow-y-auto">
-            {news.length > 0 ? (
+          <ul className="py-1 max-h-[70vh] md:max-h-96 overflow-y-auto">
+            {isLoading ? (
+              <li className="flex justify-center items-center p-10">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              </li>
+            ) : news.length > 0 ? (
               news.map(article => (
                 <li key={article.id || article._id}>
                   <Link 
@@ -88,13 +105,17 @@ const NotificationBell = () => {
                     onClick={() => setIsOpen(false)}
                   >
                     <div className="relative w-16 h-12 flex-shrink-0">
-                      <Image 
-                        src={article.image_url} 
-                        alt={article.title} 
-                        fill 
-                        sizes="64px" 
-                        className="rounded-md object-cover" 
-                      />
+                      {article.image_url ? (
+                        <Image 
+                          src={article.image_url} 
+                          alt={article.title} 
+                          fill 
+                          sizes="64px" 
+                          className="rounded-md object-cover" 
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-600 rounded-md"></div>
+                      )}
                     </div>
                     <p className="text-sm font-medium text-white leading-tight">
                       {article.title}
@@ -103,7 +124,7 @@ const NotificationBell = () => {
                 </li>
               ))
             ) : (
-              <li className="p-4 text-center text-sm text-gray-400">No news available.</li>
+              <li className="p-4 text-center text-sm text-gray-400">No recent news available.</li>
             )}
           </ul>
         </div>

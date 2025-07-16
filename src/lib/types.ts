@@ -34,3 +34,9 @@ export interface Heading {
   text: string;
   level: number;
 }
+
+export interface Highlight {
+  id: string;      // A unique ID for the video from the API
+  title: string;   // e.g., "Goal by Player X (78')"
+  embedUrl: string;// The URL for the iframe embed
+}
