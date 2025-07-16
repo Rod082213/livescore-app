@@ -13,7 +13,6 @@ import BackToNewsButton from "@/components/BackToNewsButton";
 import Header from "@/components/Header";
 import SportsNav from "@/components/SportsNav";
 import Footer from "@/components/Footer";
-
 import RightSidebar from "@/components/RightSidebar";
 
 type Props = { params: { slug: string } };
@@ -30,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = article.title || "News Article";
   
-  // --- THIS IS THE FIX: A robust description generator ---
+  // A robust description generator
   let finalDescription = '';
   const minDescriptionLength = 70; // Set a minimum acceptable length
 
@@ -45,6 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     finalDescription = fallback.slice(0, 155) + (fallback.length > 155 ? '...' : '');
   }
 
+  // Handle keywords
   let keywords: string[] = [];
   if (article.keywords) {
     if (Array.isArray(article.keywords)) {
@@ -57,21 +57,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     keywords = title.split(' ').slice(0, 10);
   }
 
+  // --- FIX: Prepare author data for consistency ---
+  const authorNames = (article.creator && article.creator.length > 0) 
+    ? article.creator 
+    : ['TLiveScores Staff'];
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com/';
   const canonicalUrl = `${siteUrl}/news/${article.slug}`;
   const imageUrl = article.image_url || `${siteUrl}/default-social-card.png`;
 
   return {
     title,
-    description: finalDescription, // Use our newly generated description
+    description: finalDescription,
     keywords: keywords.slice(0, 7),
     
+    // --- FIX: Add top-level publisher and author metadata ---
+    publisher: 'TLiveScores',
+    authors: authorNames.map(name => ({ name: name })),
+
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
       title: `${title} | TLiveScores`,
-      description: finalDescription, // Use it here too
+      description: finalDescription,
       url: canonicalUrl,
       siteName: 'TLiveScores',
       images: [
@@ -85,12 +94,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: 'en_US',
       type: 'article',
       publishedTime: article.publishedAt,
-      authors: article.creator || ['TLiveScores Staff'],
+      authors: authorNames, // Use consistent author data here
     },
     twitter: {
       card: 'summary_large_image',
       title: `${title} | TLiveScores`,
-      description: finalDescription, // And here
+      description: finalDescription,
       images: [imageUrl],
     },
     robots: {
@@ -105,7 +114,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 
-// The page component remains the same
+// The page component
 export default async function NewsArticlePage({ params }: Props) {
   const [
     article,
@@ -123,8 +132,6 @@ export default async function NewsArticlePage({ params }: Props) {
     notFound();
   }
 
-  const latestNewsForSidebar = allNews.slice(0, 5);
-
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
@@ -132,8 +139,6 @@ export default async function NewsArticlePage({ params }: Props) {
       
       <div className="container mx-auto px-4 py-8">
         <div className="lg:flex lg:gap-8">
-         
-          
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
             <article className="bg-[#2b3341] p-4 sm:p-6 rounded-lg">
               <BackToNewsButton text="Back to All News" />
