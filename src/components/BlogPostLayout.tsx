@@ -4,13 +4,19 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { IPost, ICategory, ITag, IContentBlock } from '@/models/Post';
-import BackToBlogs from '@/components/BackToBlogs'; // <-- The important import
+import BackToBlogs from '@/components/BackToBlogs';
 
 const TableOfContents = ({ contentBlocks }: { contentBlocks?: IContentBlock[] | null }) => {
   if (!contentBlocks || !Array.isArray(contentBlocks)) return null;
-  const headings = contentBlocks.filter(block => ['h1', 'h2', 'h3'].includes(block.type) && block.data?.text).map(block => ({ level: block.data.level, text: block.data.text, slug: (block.data.text ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') }));
+  const headings = contentBlocks.filter(block => block.type === 'header' && block.data?.text && [1, 2, 3].includes(block.data.level)).map(block => ({ level: block.data.level, text: block.data.text, slug: (block.data.text ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') }));
   if (headings.length === 0) return (<div className="p-4 bg-gray-800 rounded-lg border border-gray-700"><h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2><p className="text-sm text-gray-400">This article has no sections.</p></div>);
-  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, slug: string) => { e.preventDefault(); document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.history.pushState(null, '', `#${slug}`); };
+  
+  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, slug: string) => {
+    e.preventDefault();
+    document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.history.pushState(null, '', `#${slug}`);
+  };
+
   return (<div className="p-4 bg-gray-800 rounded-lg border border-gray-700"><h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2><ul className="space-y-2">{headings.map((heading, index) => (<li key={index} style={{ marginLeft: `${(heading.level - 1) * 1}rem` }}><a href={`#${heading.slug}`} onClick={(e) => handleScroll(e, heading.slug)} className="text-gray-300 hover:text-blue-400 transition-colors text-sm cursor-pointer">{heading.text}</a></li>))}</ul></div>);
 };
 
@@ -27,7 +33,7 @@ const ListItemRenderer = ({ item }: { item: { content: string, items: any[] } })
 
 const PostRenderer = ({ contentBlocks }: { contentBlocks?: IContentBlock[] | null }) => {
   if (!contentBlocks || !Array.isArray(contentBlocks)) return null;
-  return (<div className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-blue-400">{contentBlocks.map((block) => {const id = ['h1', 'h2', 'h3'].includes(block.type) ? (block.data.text ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') : block.id; switch (block.type) { case 'header': const { level, text } = block.data; if (!text || !level) return null; if (level === 1) return <h1 key={block.id} id={id} className="text-4xl font-bold">{text}</h1>; if (level === 2) return <h2 key={block.id} id={id} className="text-3xl font-bold mt-10">{text}</h2>; if (level === 3) return <h3 key={block.id} id={id} className="text-2xl font-semibold mt-8">{text}</h3>; return null; case 'paragraph': return <div key={block.id} className="text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: block.data.text }} />; case 'image': return <figure key={block.id} className="my-8"><Image src={block.data.file.url} alt={block.data.caption ?? 'Blog image'} width={800} height={450} className="rounded-lg w-full h-auto object-cover" /><figcaption className="text-center text-sm text-gray-400 mt-2">{block.data.caption}</figcaption></figure>; case 'list': const ListTag = block.data.style === 'ordered' ? 'ol' : 'ul'; const listStyle = block.data.style === 'ordered' ? 'list-decimal' : 'list-disc'; return <ListTag key={block.id} className={`${listStyle} pl-5 space-y-2 my-4`}>{block.data.items.map((item: any, index: number) => (<ListItemRenderer key={index} item={item} />))}</ListTag>; default: return null; }})}</div>);
+  return (<div className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-blue-400">{contentBlocks.map((block) => {const id = block.type === 'header' ? (block.data.text ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') : block.id; switch (block.type) { case 'header': const { level, text } = block.data; if (!text || !level) return null; if (level === 1) return <h1 key={block.id} id={id} className="text-4xl font-bold">{text}</h1>; if (level === 2) return <h2 key={block.id} id={id} className="text-3xl font-bold mt-10">{text}</h2>; if (level === 3) return <h3 key={block.id} id={id} className="text-2xl font-semibold mt-8">{text}</h3>; return null; case 'paragraph': return <div key={block.id} className="text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: block.data.text }} />; case 'image': return <figure key={block.id} className="my-8"><Image src={block.data.file.url} alt={block.data.caption ?? 'Blog image'} width={800} height={450} className="rounded-lg w-full h-auto object-cover" /><figcaption className="text-center text-sm text-gray-400 mt-2">{block.data.caption}</figcaption></figure>; case 'list': const ListTag = block.data.style === 'ordered' ? 'ol' : 'ul'; const listStyle = block.data.style === 'ordered' ? 'list-decimal' : 'list-disc'; return <ListTag key={block.id} className={`${listStyle} pl-5 space-y-2 my-4`}>{block.data.items.map((item: any, index: number) => (<ListItemRenderer key={index} item={item} />))}</ListTag>; default: return null; }})}</div>);
 };
 
 export default function BlogPostLayout({ post }: { post: IPost }) {

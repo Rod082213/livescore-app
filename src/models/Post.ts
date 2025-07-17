@@ -14,8 +14,8 @@ export interface IPost extends Document {
   slug: string;
   author: string;
   description?: string;
+  keywords?: string[];
   featuredImageUrl?: string;
-  // FIX: Content is now mongoose.Schema.Types.Mixed to store Editor.js OutputData object
   content: {
     time: number;
     blocks: IContentBlock[];
@@ -32,8 +32,9 @@ const PostSchema: Schema = new Schema({
   slug: { type: String, required: true, unique: true },
   author: { type: String, required: true },
   description: { type: String },
+  keywords: { type: [String], default: [] },
   featuredImageUrl: { type: String }, 
-  content: { type: mongoose.Schema.Types.Mixed, required: true }, // Key change here: Mixed type
+  content: { type: mongoose.Schema.Types.Mixed, required: true },
   categories: [{ type: Schema.Types.ObjectId, ref: 'Category' }],
   tags: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
 }, { timestamps: true });
