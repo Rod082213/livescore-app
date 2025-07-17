@@ -1,6 +1,8 @@
-// src/lib/api.ts (Complete and Final with YouTube Highlights)
+// src/lib/api.ts
 
 import { cache } from 'react';
+import dbConnect from './mongodb';
+import HighlightModel, { IHighlight } from '@/models/Highlight';
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails } from "@/data/mockData";
 import { format } from 'date-fns';
 import { Highlight, NewsArticleSummary, NewsArticleDetail, Lineup, MatchLineupData } from './types';
@@ -42,7 +44,7 @@ export function mapApiFixtureToMatch(apiFixture: any): Match | null {
         homeTeam: { name: apiFixture.teams.home.name, logo: apiFixture.teams.home.logo },
         awayTeam: { name: apiFixture.teams.away.name, logo: apiFixture.teams.away.logo },
         score: `${apiFixture.goals.home ?? '-'} - ${apiFixture.goals.away ?? '-'}`,
-        league: { id: apiFixture.league.id, name: apiFixture.league.name, logo: apiFixture.league.logo, country: apiFixture.league.country, flag: apiFixture.league.flag }
+        league: { id: apiFixture.league.id, name: apiFixture.league.name, logo: apiFixture.league.logo, country: apiFixture.league.country, flag: apiFixture.league.flag,  }
     };
     return match;
 }
@@ -340,8 +342,6 @@ export const fetchMatchLineups = cache(async (fixtureId: string): Promise<MatchL
       return null; // We need lineups for both teams
     }
 
-    // The API returns an array, usually with the home team first.
-    // We'll process them into a more structured home/away object.
     const homeLineupData = data.response[0];
     const awayLineupData = data.response[1];
 
@@ -371,134 +371,90 @@ export const fetchMatchLineups = cache(async (fixtureId: string): Promise<MatchL
 });
 
 
+// ==================================================================
+// === SIMPLIFIED DATA FETCHING FOR HIGHLIGHTS PAGE               ===
+// ==================================================================
 export interface DailyPageData {
-  liveWithStreams: { match: Match; stream: Highlight | null }[]; // Changed from liveMatches
-  upcomingMatches: Match[];
+  liveWithStreams: any[];
+  upcomingMatches: any[];
   finishedWithHighlights: { match: Match; highlight: Highlight }[];
 }
-export const fetchDailyMatchesAndHighlights = cache(async (date: string): Promise<DailyPageData> => {
-  // 1. Fetch all fixtures for the date (no change here)
+
+export const fetchDailyMatchesAndHighlights = async (date: string): Promise<DailyPageData> => {
+  await dbConnect();
+
   const fixturesResponse = await fetch(`${FOOTBALL_API_URL}/fixtures?date=${date}`, footballServerOptions);
-  if (!fixturesResponse.ok) {
-    return { liveWithStreams: [], upcomingMatches: [], finishedWithHighlights: [] };
-  }
-  const fixturesData = await fixturesResponse.json();
-  const allFixtures: ApiFixture[] = fixturesData.response || [];
-
-  // 2. Categorize and process in parallel
-  const liveMatchPromises = [];
-  const upcomingMatches: Match[] = [];
-  const finishedHighlightPromises = [];
-
-  for (const fixture of allFixtures) {
-    const match = mapApiFixtureToMatch(fixture);
-    if (!match) continue;
-
-    if (match.status === 'LIVE' || match.status === 'HT') {
-      // For live matches, create a promise to search for a stream
-      liveMatchPromises.push(
-        searchForLiveStream(match).then(stream => ({ match, stream }))
-      );
-    } else if (match.status === 'UPCOMING') {
-      upcomingMatches.push(match);
-    } else if (match.status === 'FT') {
-      // For finished matches, create a promise to search for highlights (your existing logic)
-      finishedHighlightPromises.push(
-         getMatchHighlights({ ...match, fixture: fixture.fixture }).then(highlights => {
-             // We now only care about the first highlight found
-             if (highlights && highlights.length > 0) {
-                 return { match, highlight: highlights[0] };
-             }
-             return null;
-         })
-      );
-    }
-  }
-
-  // 3. Wait for all API calls to YouTube to complete
-  const liveWithStreams = await Promise.all(liveMatchPromises);
-  const finishedWithHighlights = (await Promise.all(finishedHighlightPromises)).filter(Boolean);
-
-  return {
-    liveWithStreams,
-    upcomingMatches,
-    finishedWithHighlights
+  
+  const defaultResponse = {
+    liveWithStreams: [],
+    upcomingMatches: [],
+    finishedWithHighlights: [],
   };
-});
 
-export const fetchLiveMatches = cache(async (): Promise<Match[]> => {
-  if (!FOOTBALL_API_KEY) return [];
-  try {
-    const response = await fetch(`${FOOTBALL_API_URL}/fixtures?live=all`, footballServerOptions);
-    if (!response.ok) {
-      console.error("Failed to fetch live matches from Football API");
-      return [];
+  if (!fixturesResponse.ok) return defaultResponse;
+  
+  const fixturesData = await fixturesResponse.json();
+  const allFixtures: ApiFixture[] = (fixturesData.response || []).filter((f: any) => mapStatus(f.fixture.status).status === 'FT');
+
+  if (allFixtures.length === 0) return defaultResponse;
+
+  const finishedMatches = allFixtures.map(f => ({ match: mapApiFixtureToMatch(f)!, fixture: f.fixture }));
+  const matchIds = finishedMatches.map(m => m.match.id);
+
+  // 1. Find all highlights that are ALREADY in the database in one go.
+  const highlightsFromDb = await HighlightModel.find({ matchId: { $in: matchIds } });
+  const dbMatchIds = new Set(highlightsFromDb.map(h => h.matchId));
+
+  const resultsFromDb = highlightsFromDb.map(dbHighlight => ({
+    match: {
+      id: dbHighlight.matchId,
+      homeTeam: { name: dbHighlight.homeTeamName, logo: dbHighlight.homeTeamLogo },
+      awayTeam: { name: dbHighlight.awayTeamName, logo: dbHighlight.awayTeamLogo },
+      score: dbHighlight.score,
+      league: { name: dbHighlight.leagueName, logo: dbHighlight.leagueLogo, id: 0, country: '', flag: '' },
+      status: 'FT', time: 'FT'
+    },
+    highlight: {
+      id: dbHighlight.highlightId,
+      title: dbHighlight.highlightTitle,
+      embedUrl: dbHighlight.highlightEmbedUrl
     }
-    
-    const data = await response.json();
-    const liveFixtures: ApiFixture[] = data.response || [];
-    
-    // Use the existing mapApiFixtureToMatch to ensure consistent data structure
-    return liveFixtures.map(mapApiFixtureToMatch).filter((m): m is Match => m !== null);
-  } catch (error) {
-    console.error("Error in fetchLiveMatches:", error);
-    return [];
-  }
-});
+  }));
+  console.log(`[DB] Found ${resultsFromDb.length} highlights in MongoDB.`);
 
+  // 2. Identify which matches are NOT in the database and need fetching from the API.
+  const matchesToFetch = finishedMatches.filter(m => !dbMatchIds.has(m.match.id));
+  console.log(`[API] Need to fetch highlights for ${matchesToFetch.length} matches from YouTube.`);
 
-export const searchForLiveStream = cache(async (match: Match): Promise<Highlight | null> => {
-  if (!YOUTUBE_API_KEY) return null;
+  // 3. Fetch all missing highlights from the YouTube API in parallel.
+  const apiPromises = matchesToFetch.map(async ({ match, fixture }) => {
+    const highlights = await getMatchHighlights({ ...match, fixture });
+    if (highlights && highlights.length > 0) {
+      const firstHighlight = highlights[0];
+      // Save the new highlight to the DB
+      new HighlightModel({
+          matchId: match.id, matchDate: new Date(fixture.date),
+          homeTeamName: match.homeTeam.name, homeTeamLogo: match.homeTeam.logo,
+          awayTeamName: match.awayTeam.name, awayTeamLogo: match.awayTeam.logo,
+          score: match.score, leagueName: match.league.name, leagueLogo: match.league.logo,
+          highlightId: firstHighlight.id, highlightTitle: firstHighlight.title,
+          highlightEmbedUrl: firstHighlight.embedUrl,
+      }).save().catch(e => console.error(`[DB Save Error] ${e.message}`)); // Save and forget
 
-  // Build a search query specifically for live streams
-  const searchQuery = `${match.homeTeam.name} vs ${match.awayTeam.name} live stream`;
-
-  const params = new URLSearchParams({
-    part: 'snippet',
-    q: searchQuery,
-    key: YOUTUBE_API_KEY,
-    type: 'video',
-    eventType: 'live', // <-- This is the crucial parameter for live streams
-    maxResults: '1',
+      return { match, highlight: firstHighlight };
+    }
+    return null;
   });
 
-  const url = `${YOUTUBE_API_URL}?${params.toString()}`;
+  const resultsFromApi = (await Promise.all(apiPromises)).filter(Boolean) as { match: Match; highlight: Highlight }[];
 
-  try {
-    // We don't cache live stream search results for long
-    const response = await fetch(url, { next: { revalidate: 60 * 5 } }); // Cache for 5 mins
-    if (!response.ok) return null;
+  // 4. Combine results from the database and the API.
+  return {
+    liveWithStreams: [],
+    upcomingMatches: [],
+    finishedWithHighlights: [...resultsFromDb, ...resultsFromApi],
+  };
+};
 
-    const result = await response.json();
-    if (result.items && result.items.length > 0) {
-      const item = result.items[0];
-      return {
-        id: item.id.videoId,
-        title: item.snippet.title,
-        embedUrl: `https://www.youtube.com/embed/${item.id.videoId}`,
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error(`[YouTube Live Search] Error for match ${match.id}:`, error);
-    return null;
-  }
-});
-
-
-export const getLiveStreamForMatch = cache(async (matchId: string): Promise<Highlight | null> => {
-  // 1. Fetch the match details first.
-  // Because `fetchMatchDetailsById` is also cached, this call is automatically
-  // de-duplicated by Next.js and will not cause a second network request on the page.
-  const matchDetails = await fetchMatchDetailsById(matchId);
-
-  // 2. If we can't get the match details, we can't search for a stream.
-  if (!matchDetails) {
-    console.error(`[getLiveStreamForMatch] Could not find match details for ID: ${matchId}`);
-    return null;
-  }
-  
-  // 3. Use your existing `searchForLiveStream` function with the fetched details.
-  // This reuses your code and keeps the YouTube search logic in one place.
-  return searchForLiveStream(matchDetails);
-});
+// The functions 'fetchLiveMatches', 'searchForLiveStream', and 'getLiveStreamForMatch' have been removed
+// as they are no longer required for the highlights-only page.

@@ -22,6 +22,7 @@ import LeagueStandings from '@/components/team/LeagueStandings';
 import SquadList from '@/components/team/SquadList';
 import BacktoTeamLists from "@/components/BacktoTeamLists";
 
+
 // Define the type for the destructured params for clarity
 type PageProps = {
   params: {
@@ -103,7 +104,7 @@ export default async function TeamDetailPage({ params: { slug } }: PageProps) {
           </div>
           <MatchSchedule fixtures={fixtures} />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 leaguestanding lg:sticky lg:top-4">
               <LeagueStandings standings={standings} teamId={Number(teamId)} />
             </div>
             <div className="lg:col-span-2">

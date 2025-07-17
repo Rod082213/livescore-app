@@ -1,23 +1,22 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import useSWR from 'swr';
 import { DailyPageData, Match, Highlight } from '@/lib/types';
-import { format, isToday } from 'date-fns';
-import { Loader2, Calendar as CalendarIcon, Clock, Zap, CheckCircle, ChevronDown } from 'lucide-react';
-import MatchRow from '@/components/MatchRow';
+import { format } from 'date-fns';
+import { Loader2, Calendar as CalendarIcon, CheckCircle } from 'lucide-react';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
-
+// Fetches the data for a specific date from the API.
 async function getDailyDataForDate(date: Date): Promise<DailyPageData> {
   const formattedDate = format(date, 'yyyy-MM-dd');
   const response = await fetch(`/api/daily-matches-and-highlights?date=${formattedDate}`);
   if (!response.ok) {
+    // Return a default empty structure in case of an error
     return { liveWithStreams: [], upcomingMatches: [], finishedWithHighlights: [] };
   }
   return response.json();
 }
 
+// A reusable card component to display a video highlight.
 const VideoCard = ({ video, match }: { video: Highlight, match?: Match }) => (
   <div key={video.id} className="bg-[#182230] rounded-lg overflow-hidden shadow-lg">
       <div className="aspect-video bg-black">
@@ -42,26 +41,9 @@ export default function HighlightsClientPage({ initialData, initialDate }: { ini
   const [pageData, setPageData] = useState<DailyPageData>(initialData);
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // --- STATE FOR "LOAD MORE" FUNCTIONALITY ---
-  const [visibleUpcoming, setVisibleUpcoming] = useState(5); // Show 5 items initially
 
-  const isDateToday = isToday(selectedDate);
-
-  useSWR<DailyPageData['liveWithStreams']>('/api/live-matches-with-streams', {
-    refreshInterval: isDateToday ? 60000 : 0,
-    fetcher: isDateToday ? fetcher : null, // Only fetch if it's today
-    onSuccess: (liveData) => {
-      if (isDateToday) {
-        setPageData(prevData => ({ ...prevData, liveWithStreams: liveData || [] }));
-      }
-    },
-  });
-
+  // Effect to fetch new data when the selected date changes.
   useEffect(() => {
-    // Reset visible count when date changes
-    setVisibleUpcoming(5);
-    
     const loadDataForNewDate = async () => {
       setIsLoading(true);
       const newData = await getDailyDataForDate(selectedDate);
@@ -73,17 +55,15 @@ export default function HighlightsClientPage({ initialData, initialDate }: { ini
     if (!isInitialDate) {
         loadDataForNewDate();
     } else {
-        // If user navigates back to the initial date, restore initial server-fetched data
+        // If the user navigates back to the initial date, restore server-fetched data.
         setPageData(initialData);
     }
   }, [selectedDate, initialDate]);
 
-  // --- SLICED ARRAY FOR DISPLAY ---
-  const upcomingMatchesToShow = pageData.upcomingMatches.slice(0, visibleUpcoming);
-
+  // A helper component for section titles.
   const Section = ({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) => (
     <div className="mb-10">
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-3 text-white border-b border-gray-700 pb-2">
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-3 text-white pb-2">
             {icon} {title}
         </h2>
         {children}
@@ -103,7 +83,6 @@ export default function HighlightsClientPage({ initialData, initialDate }: { ini
               style={{colorScheme: 'dark'}}
             />
           </div>
-           
       </div>
       
       {isLoading ? (
@@ -112,18 +91,6 @@ export default function HighlightsClientPage({ initialData, initialDate }: { ini
         </div>
       ) : (
         <>
-          <Section title="Live Matches" icon={<Zap className="text-red-500"/>}>
-            {pageData.liveWithStreams.length > 0 ? (
-                <div className="space-y-4">
-                    {pageData.liveWithStreams.map(({ match, stream }) => 
-                        stream 
-                          ? <VideoCard key={match.id} video={stream} match={match} /> 
-                          : <MatchRow key={match.id} match={match} />
-                    )}
-                </div>
-            ) : <p className="text-gray-400">No live video matches at the moment.</p>}
-          </Section>
-
           <Section title="Finished Highlights" icon={<CheckCircle className="text-green-500"/>}>
             {pageData.finishedWithHighlights.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -133,42 +100,19 @@ export default function HighlightsClientPage({ initialData, initialDate }: { ini
               </div>
             ) : <p className="text-gray-400">No highlights available for finished matches on this day.</p>}
           </Section>
-
-          <Section title="Upcoming Matches" icon={<Clock className="text-blue-500"/>}>
-            {upcomingMatchesToShow.length > 0 ? (
-                <>
-                  <div className="space-y-2">
-                      {upcomingMatchesToShow.map(match => <MatchRow key={match.id} match={match} />)}
-                  </div>
-                  {/* --- "LOAD MORE" BUTTON RESTORED --- */}
-                  {pageData.upcomingMatches.length > visibleUpcoming && (
-                    <div className="mt-6 text-center">
-                      <button 
-                        onClick={() => setVisibleUpcoming(prev => prev + 5)}
-                        className="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 mx-auto"
-                      >
-                        <ChevronDown size={20} />
-                        Load More Matches
-                      </button>
-                    </div>
-                  )}
-                </>
-            ) : <p className="text-gray-400">No more matches scheduled for this day.</p>}
-          </Section>
         </>
       )}
+
       <div className="bg-[#2b3341] rounded-lg p-6 mt-4">
-              <h3 className="text-lg font-bold text-white mb-2">About Highlights</h3>
-              <p className="text-sm text-justify text-gray-300 mb-4"><span className="text-blue-400 font-bold">TodayLivescore Highlights</span> is your go-to destination for reliving the best moments in sports. Whether you missed the match or just want to see that stunning goal again, we’ve got you covered with fast, reliable, and high-quality highlights. From last-minute winners to jaw-dropping saves and top goal scorers, our platform brings you closer to the action—anytime, anywhere.
-
-We cover the biggest tournaments and leagues in the world, including the Premier League, La Liga, Serie A, UEFA Champions League, and The Super League. We also give you front-row access to top local events like the Basketball National League (BNL) and the South African Open (Tennis)—because we know how important local sports are to fans here in South Africa.
-Looking for today's live score highlights in South Africa? Want to catch up on yesterday’s match results or the latest football highlights South Africa fans are buzzing about? It’s all here.
-
-On TodayLivescore, you can do more than just check live scores. Explore full league tables, upcoming fixtures, recent results, and most importantly—watch highlights of the biggest matches. Every clip is carefully curated to feature key moments, top performers, and the plays that changed the game.
-
-Our platform will make it easy for you as a player to stay connected with your favorite sports through highlights that truly bring the game to life.
-</p>
-           </div>
+          <h3 className="text-lg font-bold text-white mb-2">About Highlights</h3>
+          <p className="text-sm text-justify text-gray-300 mb-4">
+              <span className="text-blue-400 font-bold">TodayLivescore Highlights</span> is your go-to destination for reliving the best moments in sports. Whether you missed the match or just want to see that stunning goal again, we’ve got you covered with fast, reliable, and high-quality highlights. From last-minute winners to jaw-dropping saves and top goal scorers, our platform brings you closer to the action—anytime, anywhere.
+              <br/><br/>
+              We cover the biggest tournaments and leagues in the world, including the Premier League, La Liga, Serie A, UEFA Champions League, and The Super League. We also give you front-row access to top local events like the Basketball National League (BNL) and the South African Open (Tennis)—because we know how important local sports are to fans here in South Africa. Looking for today's live score highlights in South Africa? Want to catch up on yesterday’s match results or the latest football highlights South Africa fans are buzzing about? It’s all here.
+              <br/><br/>
+              On TodayLivescore, you can do more than just check live scores. Explore full league tables, upcoming fixtures, recent results, and most importantly—watch highlights of the biggest matches. Every clip is carefully curated to feature key moments, top performers, and the plays that changed the game. Our platform will make it easy for you as a player to stay connected with your favorite sports through highlights that truly bring the game to life.
+          </p>
+      </div>
     </div>
   );
 }

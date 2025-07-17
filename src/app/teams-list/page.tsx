@@ -10,12 +10,13 @@ import BackButton from "@/components/BackButton";
 import Footer from '@/components/Footer';
 import SportsNav from '@/components/SportsNav';
 import LeftSidebar from '@/components/LeftSidebar';
-import TeamSidebar from '@/components/TeamSidebar'; // Assuming you still use this, otherwise use SimplifiedRightSidebar
+import TeamSidebar from '@/components/TeamSidebar';
 
 // Data Fetching and Utility Imports
 import { 
   fetchAllTeamsFromAllLeagues,
   fetchTeamOfTheWeek,
+  fetchTopLeagues, // --- IMPORT THIS ---
 } from '@/lib/api';
 import { fetchNewsList } from '@/lib/news-api';
 import { createTeamSlug } from '@/lib/utils';
@@ -27,10 +28,12 @@ export const metadata: Metadata = {
 
 export default async function AllTeamsListPage() {
   
-  const [allLeagues, teamOfTheWeek, allNews] = await Promise.all([
+  // --- ADD fetchTopLeagues to the data fetching ---
+  const [allLeagues, teamOfTheWeek, allNews, topLeagues] = await Promise.all([
     fetchAllTeamsFromAllLeagues(),
     fetchTeamOfTheWeek(),
-    fetchNewsList()
+    fetchNewsList(),
+    fetchTopLeagues(), // <-- Fetch the league data for the sidebar
   ]);
 
   const latestNewsForSidebar = allNews.slice(0, 3);
@@ -41,13 +44,11 @@ export default async function AllTeamsListPage() {
       <SportsNav />
       <div className="container mx-auto px-4 py-8">
         
-        {/* --- THIS IS THE NEW LOCATION FOR THE H1 --- */}
         <BackButton text="Back to Teams List" />
         <h1 className="text-3xl font-bold text-white mb-8">All Teams By League</h1>
 
         <div className="lg:flex lg:gap-8">
             
-          {/* Column 1: Left Sidebar */}
           <aside className="w-full lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
             <LeftSidebar 
               teamOfTheWeek={teamOfTheWeek} 
@@ -55,12 +56,10 @@ export default async function AllTeamsListPage() {
             />
           </aside>
             
-          {/* Column 2: Main Content Area */}
           <main className="w-full lg:flex-1">
-            {/* --- THE H1 HAS BEEN REMOVED FROM HERE --- */}
             <div className="space-y-10">
               {allLeagues.map((league) => (
-                <div key={league.name}>
+                <div key={league.leagueName}>
                   <h2 className="text-2xl font-semibold text-white mb-4 border-b-2 border-gray-700 pb-2">
                     {league.leagueName}
                   </h2>
@@ -89,9 +88,9 @@ export default async function AllTeamsListPage() {
             </div>
           </main>
           
-          {/* Column 3: Right Sidebar */}
           <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
-             <TeamSidebar />
+             {/* --- PASS THE FETCHED DATA TO THE SIDEBAR --- */}
+             <TeamSidebar initialTopLeagues={topLeagues} />
           </aside>
 
         </div>

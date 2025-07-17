@@ -60,3 +60,8 @@ body {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
+
+
+  .leaguestanding{
+    align-self: start;
+  }
