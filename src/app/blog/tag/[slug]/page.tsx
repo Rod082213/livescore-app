@@ -1,15 +1,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { IPost, ICategory, ITag } from '@/models/Post';
+import { IPost, ICategory, ITag } from '@/models/Post'; // Import ICategory
 import dbConnect from '@/lib/mongodb';
 import Post from '@/models/Post';
-import Category from '@/models/Category';
+import Category from '@/models/Category'; // Import Category
 import Tag from '@/models/Tag';
 
-// --- Reusable UI Components ---
 const PostCard = ({ post }: { post: IPost }) => {
-    const summary = post.content?.find(b => b.type === 'p')?.value.html.replace(/<[^>]*>/g, '').slice(0, 100) + '...' || 'Click to read more.';
+    // FIX: Access post.content.blocks for the summary
+    const summary = post.content?.blocks?.find(b => b.type === 'paragraph')?.data.text.replace(/<[^>]*>/g, '').slice(0, 100) + '...' || 'Click to read more.';
+
     return (
         <Link href={`/blog/${post.slug}`} className="block group bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
             <div className="relative w-full h-48">
@@ -20,6 +21,7 @@ const PostCard = ({ post }: { post: IPost }) => {
     );
 };
 
+// Reusable Sidebar component (defined once here, used on both archive pages)
 const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }) => (
     <aside className="lg:col-span-3">
         <div className="sticky top-24 space-y-8">
@@ -43,6 +45,7 @@ async function getTagData(tagSlug: string) {
     const tag = await Tag.findOne({ name: { $regex: new RegExp(`^${tagSlug}$`, 'i') } }).lean();
     if (!tag) return null;
     
+    // Fetch posts AND all categories/tags in parallel
     const [posts, allCategories, allTags] = await Promise.all([
         Post.find({ tags: tag._id }).sort({ createdAt: -1 }).lean(),
         Category.find({}).sort({ name: 1 }).lean(),

@@ -1,0 +1,45 @@
+/* src/styles/editorjs-custom.css */
+
+/* Make the Add Block (+) button visible */
+.ce-block-toolbar__plus,
+.ce-toolbar__actions .ce-toolbar__plus { /* Targeting both contexts */
+    color: #e2e8f0 !important; /* light gray, matching text */
+    background-color: transparent !important; /* Ensure no background interference */
+    opacity: 1 !important; /* Ensure it's not faded */
+}
+
+/* Make the Block Tune (three dots) button visible */
+.ce-toolbar__settings-btn {
+    color: #e2e8f0 !important; /* light gray */
+    background-color: transparent !important;
+    opacity: 1 !important;
+}
+
+/* Make block drag handles visible (if they are also invisible) */
+.ce-drag-handler {
+    color: #a0aec0 !important; /* slightly darker gray */
+    opacity: 1 !important;
+}
+
+/* Ensure other UI elements (like toolbox icons) are visible */
+.ce-popover__item-icon,
+.ce-toolbox__button svg {
+    color: #e2e8f0 !important;
+}
+
+/* Optional: Style the active/hover states for toolbar items */
+.ce-popover__item:hover .ce-popover__item-icon {
+    color: white !important; /* White on hover */
+}
+
+/* Optional: Adjust placeholder text color */
+.ce-paragraph[data-placeholder]:empty::before,
+.ce-header[data-placeholder]:empty::before,
+.cdx-input[data-placeholder]:empty::before {
+    color: #a0aec0 !important; /* gray-400 */
+}
+
+/* Ensure editor content area has some basic dark theme styling */
+.codex-editor__redactor {
+    color: #e2e8f0; /* Default text color */
+}
