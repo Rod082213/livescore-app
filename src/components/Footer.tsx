@@ -41,7 +41,7 @@ const Footer = () => {
             <h2 className="text-lg font-bold text-white mb-4">Company</h2>
             <ul className="space-y-3"> {/* Increased vertical spacing */}
               <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">About Us</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Careers</a></li>
+              <li><a href="/contact" className="text-gray-400 hover:text-white text-sm transition-colors">Contact Us</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Press</a></li>
             </ul>
           </div>
