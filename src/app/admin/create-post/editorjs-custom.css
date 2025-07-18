@@ -15,6 +15,18 @@
     opacity: 1 !important;
 }
 
+.ce-paragraph a{
+    color: #63b3ed !important; /* light blue */
+}
+
+.leading-relaxed a{
+  color: red !important; /* Ensure links are visible */
+}
+
+
+.ce-inline-tool-input{
+    color:black !important;
+}
 /* Make block drag handles visible (if they are also invisible) */
 .ce-drag-handler {
     color: #a0aec0 !important; /* slightly darker gray */

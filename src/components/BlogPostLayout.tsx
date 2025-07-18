@@ -5,13 +5,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { IPost, ICategory, ITag, IContentBlock } from '@/models/Post';
 import BackToBlogs from '@/components/BackToBlogs';
+import '../app/admin/create-post/editorjs-custom.css';
 
 const TableOfContents = ({ contentBlocks }: { contentBlocks?: IContentBlock[] | null }) => {
   if (!contentBlocks || !Array.isArray(contentBlocks)) return null;
   const headings = contentBlocks.filter(block => block.type === 'header' && block.data?.text && [1, 2, 3].includes(block.data.level)).map(block => ({ level: block.data.level, text: block.data.text, slug: (block.data.text ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') }));
   if (headings.length === 0) return (<div className="p-4 bg-gray-800 rounded-lg border border-gray-700"><h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2><p className="text-sm text-gray-400">This article has no sections.</p></div>);
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, slug: string) => { e.preventDefault(); document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.history.pushState(null, '', `#${slug}`); };
-  return (<div className="p-4 bg-gray-800 rounded-lg border border-gray-700"><h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2><ul className="space-y-2">{headings.map((heading, index) => (<li key={index} style={{ marginLeft: `${(heading.level - 1) * 1}rem` }}><a href={`#${heading.slug}`} onClick={(e) => handleScroll(e, heading.slug)} className="text-gray-300 hover:text-blue-400 transition-colors text-sm cursor-pointer">{heading.text}</a></li>))}</ul></div>);
+  return (<div className="p-4 bg-gray-800 rounded-lg border border-gray-700"><h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2><ul className="space-y-2">{headings.map((heading, index) => (<li key={index} style={{ marginLeft: `${(heading.level - 1) * 1}rem` }}><a href={`#${heading.slug}`} onClick={(e) => handleScroll(e, heading.slug)} className="text-gray-300 hover:text-blue-400 transition-colors text-sm cursor-pointer" dangerouslySetInnerHTML={{ __html: heading.text }} /></li>))}</ul></div>);
 };
 
 const PostMeta = ({ categories, tags }: { categories?: ICategory[], tags?: ITag[] }) => {
@@ -28,7 +29,7 @@ const ListItemRenderer = ({ item }: { item: { content: string, items: any[] } })
 const PostRenderer = ({ contentBlocks }: { contentBlocks?: IContentBlock[] | null }) => {
   if (!contentBlocks || !Array.isArray(contentBlocks)) return null;
   return (
-    <div className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-blue-400">
+    <div className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-blue-400 hover:prose-a:text-blue-300 transition-colors">
       {contentBlocks.map((block) => {
         const id = block.type === 'header' ? (block.data.text ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') : block.id;
         switch (block.type) {
@@ -52,23 +53,9 @@ const PostRenderer = ({ contentBlocks }: { contentBlocks?: IContentBlock[] | nul
               <div key={block.id} className="my-6 overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   {block.data.withHeadings && (
-                    <thead>
-                      <tr className="bg-gray-700/50">
-                        {block.data.content[0].map((cellContent: string, cellIndex: number) => (
-                          <th key={cellIndex} className="p-3 border border-gray-600 font-semibold" dangerouslySetInnerHTML={{ __html: cellContent }} />
-                        ))}
-                      </tr>
-                    </thead>
+                    <thead><tr className="bg-gray-700/50">{block.data.content[0].map((cellContent: string, cellIndex: number) => (<th key={cellIndex} className="p-3 border border-gray-600 font-semibold" dangerouslySetInnerHTML={{ __html: cellContent }} />))}</tr></thead>
                   )}
-                  <tbody className="align-baseline">
-                    {(block.data.withHeadings ? block.data.content.slice(1) : block.data.content).map((row: string[], rowIndex: number) => (
-                      <tr key={rowIndex} className="bg-gray-800 even:bg-gray-700/20">
-                        {row.map((cellContent: string, cellIndex: number) => (
-                          <td key={cellIndex} className="p-3 border border-gray-600" dangerouslySetInnerHTML={{ __html: cellContent }} />
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
+                  <tbody className="align-baseline">{(block.data.withHeadings ? block.data.content.slice(1) : block.data.content).map((row: string[], rowIndex: number) => (<tr key={rowIndex} className="bg-gray-800 even:bg-gray-700/20">{row.map((cellContent: string, cellIndex: number) => (<td key={cellIndex} className="p-3 border border-gray-600" dangerouslySetInnerHTML={{ __html: cellContent }} />))}</tr>))}</tbody>
                 </table>
               </div>
             );
