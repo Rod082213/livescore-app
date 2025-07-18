@@ -1,86 +1,160 @@
-import React from 'react';
-import { notFound } from 'next/navigation';
+// src/app/news/[slug]/page.tsx
+
+import { notFound } from "next/navigation";
 import { Metadata } from 'next';
-import Header from '@/components/Header';
-import SportsNav from '@/components/SportsNav';
-import Footer from '@/components/Footer';
-import { IPost, IContentBlock, ITag, ICategory } from '@/models/Post';
-import dbConnect from '@/lib/mongodb';
-import Post from '@/models/Post';
-import BlogPostLayout from '@/components/BlogPostLayout';
 
-async function getPost(slug: string): Promise<IPost | null> {
-  await dbConnect();
-  const post = await Post.findOne({ slug }).populate('categories', 'name').populate('tags', 'name').lean();
-  return post as IPost | null;
-}
+// Data fetching functions
+import { fetchNewsBySlug, fetchNewsList } from "@/lib/news-api";
+import { fetchTeamOfTheWeek, fetchTopLeagues } from "@/lib/api";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = await getPost(params.slug);
-  if (!post) return { title: "Post Not Found" };
+// Component Imports
+import ArticleBody from "@/components/ArticleBody";
+import BackToNewsButton from "@/components/BackToNewsButton";
+import Header from "@/components/Header";
+import SportsNav from "@/components/SportsNav";
+import Footer from "@/components/Footer";
+import RightSidebar from "@/components/RightSidebar";
 
-  const h1Block = post.content?.blocks?.find((b: IContentBlock) => b.type === 'header' && b.data.level === 1);
-  const mainTitle = h1Block?.data.text || post.title || "Untitled Article";
+type Props = { params: { slug: string } };
 
-  let safeDescription = post.description || '';
-  if (!safeDescription) {
-    const firstParagraph = post.content?.blocks?.find((b: IContentBlock) => b.type === 'paragraph');
-    safeDescription = firstParagraph ? (firstParagraph.data.text ?? '').replace(/<[^>]*>/g, '').slice(0, 160) : 'Read this article on TodayLiveScores.';
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const article = await fetchNewsBySlug(params.slug);
+
+  if (!article) {
+    return {
+      title: "Article Not Found",
+      description: "The news article you are looking for could not be found.",
+    };
   }
 
-  let finalKeywords = '';
-  if (post.keywords && Array.isArray(post.keywords) && post.keywords.length > 0) {
-    finalKeywords = post.keywords.join(', ');
+  const title = article.title || "News Article";
+  
+  // A robust description generator
+  let finalDescription = '';
+  const minDescriptionLength = 70; // Set a minimum acceptable length
+
+  // First, check if the API summary is good enough
+  if (article.summary && article.summary.length > minDescriptionLength) {
+    // If it's good, use it, but make sure it's not too long
+    finalDescription = article.summary.slice(0, 155) + (article.summary.length > 155 ? '...' : '');
   } else {
-    const stopWords = new Set(['a', 'an', 'the', 'in', 'on', 'for', 'and', 'with', 'to', 'is', 'of']);
-    const cleanWords = mainTitle.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(word => word.length > 1 && !stopWords.has(word));
-    const keywordPhrases: string[] = [];
-    if (cleanWords.length >= 2) for (let i = 0; i <= cleanWords.length - 2; i++) keywordPhrases.push(`${cleanWords[i]} ${cleanWords[i+1]}`);
-    if (cleanWords.length >= 3) for (let i = 0; i <= cleanWords.length - 3; i++) keywordPhrases.push(`${cleanWords[i]} ${cleanWords[i+1]} ${cleanWords[i+2]}`);
-    let generatedKeywords = Array.from(new Set(keywordPhrases)).slice(0, 4).join(', ');
-    if (!generatedKeywords && post.tags && (post.tags as ITag[]).length > 0) {
-      generatedKeywords = (post.tags as ITag[]).map(tag => tag.name).join(', ');
-    }
-    finalKeywords = generatedKeywords;
+    // If the summary is too short or missing, generate a better one from the title.
+    const fallback = `Read the full story on "${title}". Get in-depth analysis and the latest updates on TLiveScores, your definitive source for breaking sports news.`;
+    // Ensure the generated fallback also respects the length limit.
+    finalDescription = fallback.slice(0, 155) + (fallback.length > 155 ? '...' : '');
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const canonicalUrl = `${siteUrl}/blog/${post.slug}`;
-  const authorName = post.author || 'TodayLiveScores Staff';
+  // Handle keywords
+  let keywords: string[] = [];
+  if (article.keywords) {
+    if (Array.isArray(article.keywords)) {
+      keywords = article.keywords;
+    } else if (typeof article.keywords === 'string') {
+      keywords = article.keywords.split(',').map(k => k.trim());
+    }
+  }
+  if (keywords.length === 0) {
+    keywords = title.split(' ').slice(0, 10);
+  }
+
+  // --- FIX: Prepare author data for consistency ---
+  const authorNames = (article.creator && article.creator.length > 0) 
+    ? article.creator 
+    : ['TLiveScores Staff'];
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com/';
+  const canonicalUrl = `${siteUrl}/news/${article.slug}`;
+  const imageUrl = article.image_url || `${siteUrl}/default-social-card.png`;
 
   return {
-    title: `${mainTitle} | TodayLiveScores Blog`,
-    description: safeDescription,
-    keywords: finalKeywords || undefined,
-    authors: [{ name: authorName }],
-    publisher: 'TodayLiveScores',
-    alternates: { canonical: canonicalUrl },
-    robots: { index: true, follow: true },
+    title,
+    description: finalDescription,
+    keywords: keywords.slice(0, 7),
+    
+    // --- FIX: Add top-level publisher and author metadata ---
+    publisher: 'TLiveScores',
+    authors: authorNames.map(name => ({ name: name })),
+
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title: mainTitle,
-      description: safeDescription,
+      title: `${title} | TLiveScores`,
+      description: finalDescription,
       url: canonicalUrl,
-      siteName: 'TodayLiveScores Blog',
-      images: [{ url: post.featuredImageUrl || `${siteUrl}/default-og-image.jpg`, width: 1200, height: 630 }],
+      siteName: 'TLiveScores',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
       locale: 'en_US',
       type: 'article',
+      publishedTime: article.publishedAt,
+      authors: authorNames, // Use consistent author data here
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | TLiveScores`,
+      description: finalDescription,
+      images: [imageUrl],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+      },
     },
   };
 }
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
-  const fetchedPost = await getPost(params.slug);
-  if (!fetchedPost) {
+
+// The page component
+export default async function NewsArticlePage({ params }: Props) {
+  const [
+    article,
+    allNews,
+    teamOfTheWeek,
+    topLeagues,
+  ] = await Promise.all([
+    fetchNewsBySlug(params.slug),
+    fetchNewsList(),
+    fetchTeamOfTheWeek(),
+    fetchTopLeagues(),
+  ]);
+
+  if (!article) {
     notFound();
   }
 
-  const plainPostObject = JSON.parse(JSON.stringify(fetchedPost));
-
   return (
-    <div className="bg-[#1d222d] text-white min-h-screen">
+    <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
       <SportsNav />
-      <BlogPostLayout post={plainPostObject} />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="lg:flex lg:gap-8">
+          <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
+            <article className="bg-[#2b3341] p-4 sm:p-6 rounded-lg">
+              <BackToNewsButton text="Back to All News" />
+              <ArticleBody article={article} />
+            </article>
+          </main>
+          
+          <aside className="hidden lg:block lg:w-72 lg:order-3 flex-shrink-0 lg:sticky lg:top-8 lg:self-start">
+            <RightSidebar 
+              initialTopLeagues={topLeagues} 
+              initialFeaturedMatch={null}
+            />
+          </aside>
+        </div>
+      </div>
+      
       <Footer />
     </div>
   );
