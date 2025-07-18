@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import Header from '@/components/Header';
 import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
-import { IPost, IContentBlock, ITag } from '@/models/Post';
+import { IPost, IContentBlock, ITag, ICategory } from '@/models/Post';
 import dbConnect from '@/lib/mongodb';
 import Post from '@/models/Post';
 import BlogPostLayout from '@/components/BlogPostLayout';
@@ -28,7 +28,21 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     safeDescription = firstParagraph ? (firstParagraph.data.text ?? '').replace(/<[^>]*>/g, '').slice(0, 160) : 'Read this article on TodayLiveScores.';
   }
 
-  const finalKeywords = post.keywords && Array.isArray(post.keywords) ? post.keywords.join(', ') : '';
+  let finalKeywords = '';
+  if (post.keywords && Array.isArray(post.keywords) && post.keywords.length > 0) {
+    finalKeywords = post.keywords.join(', ');
+  } else {
+    const stopWords = new Set(['a', 'an', 'the', 'in', 'on', 'for', 'and', 'with', 'to', 'is', 'of']);
+    const cleanWords = mainTitle.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(word => word.length > 1 && !stopWords.has(word));
+    const keywordPhrases: string[] = [];
+    if (cleanWords.length >= 2) for (let i = 0; i <= cleanWords.length - 2; i++) keywordPhrases.push(`${cleanWords[i]} ${cleanWords[i+1]}`);
+    if (cleanWords.length >= 3) for (let i = 0; i <= cleanWords.length - 3; i++) keywordPhrases.push(`${cleanWords[i]} ${cleanWords[i+1]} ${cleanWords[i+2]}`);
+    let generatedKeywords = Array.from(new Set(keywordPhrases)).slice(0, 4).join(', ');
+    if (!generatedKeywords && post.tags && (post.tags as ITag[]).length > 0) {
+      generatedKeywords = (post.tags as ITag[]).map(tag => tag.name).join(', ');
+    }
+    finalKeywords = generatedKeywords;
+  }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const canonicalUrl = `${siteUrl}/blog/${post.slug}`;
