@@ -1,21 +1,48 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { IPost, ICategory, ITag } from '@/models/Post';
 import CreatableSelect from 'react-select/creatable';
 import { MultiValue } from 'react-select';
 import { OutputData } from '@editorjs/editorjs';
+import { EditorJsMethods } from '@/components/EditorJsComponent';
 
 interface SelectOption { value: string; label: string; }
 
 const LoadingSpinner = () => <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-blue-500"></div>;
 const FeaturedImageUploader = dynamic(() => import('@/components/FeaturedImageUploader'), { ssr: false });
-const EditorJsComponent = dynamic(() => import('@/components/EditorJsComponent'), { ssr: false });
+const EditorJsComponent = dynamic(() => import('@/components/EditorJsComponent'), { ssr: false, loading: () => <div className="bg-gray-700 rounded-md p-4 min-h-[300px] text-gray-400">Loading Editor...</div> });
 
 const EditorJsPreviewRenderer = ({ data }: { data: OutputData }) => {
-  if (!data || !Array.isArray(data.blocks) || data.blocks.length === 0) return <div className="p-4 text-gray-400 italic">Start typing...</div>;
-  return (<div className="prose prose-invert max-w-none">{data.blocks.map((block: any) => { switch (block.type) { case 'header': const { level, text } = block.data; if (level === 1) return <h1 key={block.id}>{text}</h1>; if (level === 2) return <h2 key={block.id}>{text}</h2>; if (level === 3) return <h3 key={block.id}>{text}</h3>; return null; case 'paragraph': return <div key={block.id} dangerouslySetInnerHTML={{ __html: block.data.text }} />; case 'image': return (<figure key={block.id} className="my-6"><img src={block.data.file.url} alt={block.data.caption || 'Image'} className="rounded-lg" /><figcaption>{block.data.caption}</figcaption></figure>); case 'list': const ListTag = block.data.style === 'ordered' ? 'ol' : 'ul'; return (<ListTag key={block.id}>{block.data.items.map((item: any, index: number) => { const content = typeof item === 'object' ? item.content : item; return (<li key={index} dangerouslySetInnerHTML={{ __html: content }} />);})}</ListTag>); default: return null; }})}</div>);
+  if (!data || !Array.isArray(data.blocks) || data.blocks.length === 0) {
+    return <div className="p-4 text-gray-400 italic">Start typing in the editor to see a live preview...</div>;
+  }
+  return (
+    <div className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-blue-400 hover:prose-a:text-blue-300 transition-colors">
+      {data.blocks.map((block: any) => {
+        switch (block.type) {
+          case 'header':
+            const { level, text } = block.data;
+            if (!level || !text) return null;
+            if (level === 1) return <h1 key={block.id} className="text-4xl font-extrabold mb-4">{text}</h1>;
+            if (level === 2) return <h2 key={block.id} className="text-3xl font-bold mt-8 mb-4 border-b border-gray-700 pb-2">{text}</h2>;
+            if (level === 3) return <h3 key={block.id} className="text-2xl font-semibold mt-6 mb-3">{text}</h3>;
+            return null;
+          case 'paragraph':
+            return <div key={block.id} className="text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: block.data.text }} />;
+          case 'image':
+            return (<figure key={block.id} className="my-6"><img src={block.data.file.url} alt={block.data.caption || 'Content image'} className="rounded-lg w-full h-auto object-cover" /><figcaption className="text-center text-sm text-gray-400 mt-2">{block.data.caption}</figcaption></figure>);
+          case 'list':
+            const ListTag = block.data.style === 'ordered' ? 'ol' : 'ul';
+            const listStyle = block.data.style === 'ordered' ? 'list-decimal' : 'list-disc';
+            return (<ListTag key={block.id} className={`${listStyle} pl-5 space-y-2`}>{block.data.items.map((item: any, index: number) => { const content = typeof item === 'object' && item.content ? item.content : item; return (<li key={index} className="text-lg" dangerouslySetInnerHTML={{ __html: content }} />);})}</ListTag>);
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
 };
 
 const PublishedPostsTable = ({ posts, isLoading, onEdit, onDelete }: { posts: IPost[], isLoading: boolean, onEdit: (post: IPost) => void, onDelete: (id: string) => void }) => (
@@ -30,6 +57,7 @@ const LoginForm = ({ onAuthenticated }: { onAuthenticated: () => void }) => {
 };
 
 const CreatePostPage = () => {
+    const editorComponentRef = useRef<EditorJsMethods>(null);
     const [isMounted, setIsMounted] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [posts, setPosts] = useState<IPost[]>([]);
@@ -49,6 +77,7 @@ const CreatePostPage = () => {
     const [content, setContent] = useState<OutputData>({ time: Date.now(), blocks: [], version: "2.28.2" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [editorKey, setEditorKey] = useState(Date.now());
 
     const fetchInitialData = useCallback(async () => {
         setIsPostsLoading(true);
@@ -71,7 +100,9 @@ const CreatePostPage = () => {
     
     const resetForm = () => {
         setEditingPostId(null); setTitle(''); setSlug(''); setAuthor(''); setDescription(''); setKeywords('');
-        setFeaturedImageUrl(''); setContent({ time: Date.now(), blocks: [], version: "2.28.2" });
+        setFeaturedImageUrl('');
+        setContent({ time: Date.now(), blocks: [], version: "2.28.2" });
+        setEditorKey(Date.now());
         setSelectedCategories([]); setSelectedTags([]); setFormError(null); window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -79,7 +110,9 @@ const CreatePostPage = () => {
         setEditingPostId(post._id.toString()); setTitle(post.title); setSlug(post.slug); setAuthor(post.author);
         setDescription(post.description || '');
         setKeywords(Array.isArray(post.keywords) ? post.keywords.join(', ') : '');
-        setFeaturedImageUrl(post.featuredImageUrl || ''); setContent(post.content as OutputData);
+        setFeaturedImageUrl(post.featuredImageUrl || '');
+        setContent(post.content as OutputData);
+        setEditorKey(Date.now());
         const postCategoryIds = (post.categories as any[]).map(c => typeof c === 'string' ? c : c._id.toString());
         const postTagIds = (post.tags as any[]).map(t => typeof t === 'string' ? t : t._id.toString());
         setSelectedCategories(allCategories.filter(opt => postCategoryIds.includes(opt.value)));
@@ -164,8 +197,8 @@ const CreatePostPage = () => {
                                 <div><label className="block text-sm mb-1">Tags</label><CreatableSelect instanceId="tags-select" isMulti options={allTags} value={selectedTags} onChange={(v) => setSelectedTags(v as MultiValue<SelectOption>)} onCreateOption={(val) => handleCreateOption(val, 'tags')} styles={selectStyles} className="text-black" /></div>
                             </div>
                             <div className="p-4 bg-gray-800 rounded-lg">
-                                <h2 className="text-xl font-semibold mb-4">Content</h2>
-                                <EditorJsComponent data={content} onChange={setContent} />
+                                <h2 className="text-xl font-semibold mb-4">Content Editor</h2>
+                                <EditorJsComponent key={editorKey} data={content} onChange={setContent} />
                             </div>
                             <button type="submit" disabled={isSubmitting} className="w-full bg-green-600 hover:bg-green-700 font-bold py-3 rounded text-lg disabled:bg-gray-500">{isSubmitting ? 'Saving...' : (editingPostId ? 'Update Post' : 'Publish Post')}</button>
                         </form>

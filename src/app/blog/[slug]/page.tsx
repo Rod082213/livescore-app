@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     const firstParagraph = post.content?.blocks?.find((b: IContentBlock) => b.type === 'paragraph');
     safeDescription = firstParagraph ? (firstParagraph.data.text ?? '').replace(/<[^>]*>/g, '').slice(0, 160) : 'Read this article on TodayLiveScores.';
   }
-  const finalKeywords = post.keywords && Array.isArray(post.keywords) ? post.keywords.join(', ') : '';
 
+  const finalKeywords = post.keywords && Array.isArray(post.keywords) ? post.keywords.join(', ') : '';
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const canonicalUrl = `${siteUrl}/blog/${post.slug}`;

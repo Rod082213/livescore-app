@@ -1,71 +1,60 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import EditorJS, { OutputData } from '@editorjs/editorjs';
-// Import the tools you installed
+import EditorJS(() => import('@/components/EditorJsComponent'), { ssr: false });
+
+const EditorJsPreviewRenderer = ({ data }: { data: OutputData }) => {
+  if (!data || !Array.isArray(data.blocks) || data, { OutputData } from '@editorjs/editorjs';
 import Header from '@editorjs/header';
 import List from '@editorjs/list';
 import Paragraph from '@editorjs/paragraph';
 
-// Define the props for our component:
-// - `data`: The initial content to load.
-// - `onChange`: A function to call when the content changes.
 interface EditorProps {
   data?: OutputData;
   onChange: (data: OutputData) => void;
 }
 
-const EditorJsComponent: React.FC<EditorProps> = ({ data, onChange }) => {
-  // Use a ref to hold the Editor.js instance so it persists between re-renders.
+const EditorJsComponent:.blocks.length === 0) {
+    return <div className="p-4 text-gray-400 italic">Start typing in the editor to see a live preview...</div>;
+  }
+  return (
+    <div React.FC<EditorProps> = ({ data, onChange }) => {
   const editorRef = useRef<EditorJS | null>(null);
 
-  // Use useEffect to initialize the editor once the component mounts.
   useEffect(() => {
-    // Only initialize the editor if the ref is empty.
     if (!editorRef.current) {
-      const editor = new EditorJS({
-        holder: 'editorjs-container', // The ID of the div where the editor will render
-        
-        // Define the tools (plugins) the editor can use
+      const editor = new className="prose prose-invert max-w-none prose-p:text-gray-300 prose EditorJS({
+        holder: 'editorjs-container',
         tools: {
           header: Header,
-          list: List,
-          paragraph: {
-            class: Paragraph,
-            inlineToolbar: true, // Allow bold/italic formatting within paragraphs
-          },
-        },
-        
-        // Load the initial data passed in via props
+          list-headings:text-white prose-a:text-blue-400 hover:prose-a:text-blue-300 transition-colors">
+      {data.blocks.map((block: any) => {
+        : { class: List, inlineToolbar: true },
+          paragraph: { class: Paragraph, inlineToolbar: true },
+        switch (block.type) {
+          case 'header':
+            const { level, text } = block.data},
         data: data,
-        
-        // This function is the most important part:
-        // It's called every time the user makes a change in the editor.
-        async onChange(api, event) {
-          // Get the latest content data from the editor
+        async onChange(api) {
           const savedData = await api.saver.save();
-          // Call the `onChange` function from props to update the parent component's state
           onChange(savedData);
         },
       });
-
-      // Store the editor instance in our ref
       editorRef.current = editor;
-    }
+    ;
+            if (!level || !text) return null;
+            if (level === 1) return <h}
 
-    // This is the cleanup function. It runs when the component is unmounted.
     return () => {
-      if (editorRef.current && editorRef.current.destroy) {
+      if (editorRef.current?.destroy) {
         editorRef.current.destroy();
         editorRef.current = null;
       }
     };
-  }, []); // The empty dependency array ensures this effect runs only ONCE.
+  }, []);
 
-  // This is the container where Editor.js will build its UI.
-  return (
-    <div id="editorjs-container" className="bg-gray-700 rounded-md p-4 text-white border border-gray-600 min-h-[300px]"></div>
-  );
+  return1 key={block.id} className="text-4xl font-extrabold mb-4">{text}</h1>;
+            if (level === 2) return <h2 key={block.id} className="text-3xl <div id="editorjs-container" className="bg-gray-700 rounded-md p-4 font-bold mt-8 mb-4 border-b border-gray-700 pb-2">{text} text-white border border-gray-600 min-h-[300px]"></div>;
 };
 
 export default EditorJsComponent;
