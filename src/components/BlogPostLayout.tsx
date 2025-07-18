@@ -10,25 +10,8 @@ const TableOfContents = ({ contentBlocks }: { contentBlocks?: IContentBlock[] | 
   if (!contentBlocks || !Array.isArray(contentBlocks)) return null;
   const headings = contentBlocks.filter(block => block.type === 'header' && block.data?.text && [1, 2, 3].includes(block.data.level)).map(block => ({ level: block.data.level, text: block.data.text, slug: (block.data.text ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') }));
   if (headings.length === 0) return (<div className="p-4 bg-gray-800 rounded-lg border border-gray-700"><h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2><p className="text-sm text-gray-400">This article has no sections.</p></div>);
-  
-  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, slug: string) => {
-    e.preventDefault();
-    document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.history.pushState(null, '', `#${slug}`);
-  };
-
-  return (
-    <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-      <h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2>
-      <ul className="space-y-2">
-        {headings.map((heading, index) => (
-          <li key={index} style={{ marginLeft: `${(heading.level - 1) * 1}rem` }}>
-            <a href={`#${heading.slug}`} onClick={(e) => handleScroll(e, heading.slug)} className="text-gray-300 hover:text-blue-400 transition-colors text-sm cursor-pointer" dangerouslySetInnerHTML={{ __html: heading.text }} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, slug: string) => { e.preventDefault(); document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.history.pushState(null, '', `#${slug}`); };
+  return (<div className="p-4 bg-gray-800 rounded-lg border border-gray-700"><h2 className="text-lg font-bold text-white mb-3">Table of Contents</h2><ul className="space-y-2">{headings.map((heading, index) => (<li key={index} style={{ marginLeft: `${(heading.level - 1) * 1}rem` }}><a href={`#${heading.slug}`} onClick={(e) => handleScroll(e, heading.slug)} className="text-gray-300 hover:text-blue-400 transition-colors text-sm cursor-pointer">{heading.text}</a></li>))}</ul></div>);
 };
 
 const PostMeta = ({ categories, tags }: { categories?: ICategory[], tags?: ITag[] }) => {
@@ -64,6 +47,31 @@ const PostRenderer = ({ contentBlocks }: { contentBlocks?: IContentBlock[] | nul
             const ListTag = block.data.style === 'ordered' ? 'ol' : 'ul';
             const listStyle = block.data.style === 'ordered' ? 'list-decimal' : 'list-disc';
             return <ListTag key={block.id} className={`${listStyle} pl-5 space-y-2 my-4`}>{block.data.items.map((item: any, index: number) => (<ListItemRenderer key={index} item={item} />))}</ListTag>;
+          case 'table':
+            return (
+              <div key={block.id} className="my-6 overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  {block.data.withHeadings && (
+                    <thead>
+                      <tr className="bg-gray-700/50">
+                        {block.data.content[0].map((cellContent: string, cellIndex: number) => (
+                          <th key={cellIndex} className="p-3 border border-gray-600 font-semibold" dangerouslySetInnerHTML={{ __html: cellContent }} />
+                        ))}
+                      </tr>
+                    </thead>
+                  )}
+                  <tbody className="align-baseline">
+                    {(block.data.withHeadings ? block.data.content.slice(1) : block.data.content).map((row: string[], rowIndex: number) => (
+                      <tr key={rowIndex} className="bg-gray-800 even:bg-gray-700/20">
+                        {row.map((cellContent: string, cellIndex: number) => (
+                          <td key={cellIndex} className="p-3 border border-gray-600" dangerouslySetInnerHTML={{ __html: cellContent }} />
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
           default:
             return null;
         }

@@ -38,6 +38,31 @@ const EditorJsPreviewRenderer = ({ data }: { data: OutputData }) => {
             const ListTag = block.data.style === 'ordered' ? 'ol' : 'ul';
             const listStyle = block.data.style === 'ordered' ? 'list-decimal' : 'list-disc';
             return (<ListTag key={block.id} className={`${listStyle} pl-5 space-y-2`}>{block.data.items.map((item: any, index: number) => { const content = typeof item === 'object' && item.content ? item.content : item; return (<li key={index} className="text-lg" dangerouslySetInnerHTML={{ __html: content }} />);})}</ListTag>);
+          case 'table':
+            return (
+              <div key={block.id} className="my-6 overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <tbody>
+                    {block.data.withHeadings && (
+                      <thead>
+                        <tr className="bg-gray-700">
+                          {block.data.content[0].map((cellContent: string, cellIndex: number) => (
+                            <th key={cellIndex} className="p-3 border border-gray-600 font-semibold" dangerouslySetInnerHTML={{ __html: cellContent }} />
+                          ))}
+                        </tr>
+                      </thead>
+                    )}
+                    {(block.data.withHeadings ? block.data.content.slice(1) : block.data.content).map((row: string[], rowIndex: number) => (
+                      <tr key={rowIndex} className="bg-gray-800 even:bg-gray-700/50">
+                        {row.map((cellContent: string, cellIndex: number) => (
+                          <td key={cellIndex} className="p-3 border border-gray-600" dangerouslySetInnerHTML={{ __html: cellContent }} />
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
           default:
             return null;
         }
