@@ -7,6 +7,7 @@ import CreatableSelect from 'react-select/creatable';
 import { MultiValue } from 'react-select';
 import { OutputData } from '@editorjs/editorjs';
 import { EditorJsMethods } from '@/components/EditorJsComponent';
+import '../create-post/editorjs-custom.css';
 
 interface SelectOption { value: string; label: string; }
 
