@@ -5,7 +5,7 @@ import dbConnect from './mongodb';
 import HighlightModel, { IHighlight } from '@/models/Highlight';
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails } from "@/data/mockData";
 import { format } from 'date-fns';
-import { Highlight, NewsArticleSummary, NewsArticleDetail, Lineup, MatchLineupData } from './types';
+import { Highlight, Lineup, MatchLineupData } from './types';
 
 // ==================================================================
 // === FOOTBALL API CONFIGURATION (No Changes)                    ===
@@ -291,44 +291,6 @@ export const getMatchHighlights = cache(async (matchDetails: MatchDetails): Prom
   }
 });
 
-
-// ==================================================================
-// === NEWS API FUNCTIONS (No Changes)                            ===
-// ==================================================================
-const NEWS_API_BASE_URL = "https://news.todaylivescores.com";
-
-export const fetchNewsList = cache(async (): Promise<NewsArticleSummary[]> => {
-  try {
-    const res = await fetch(`${NEWS_API_BASE_URL}/api/news`, { next: { revalidate: 600 } });
-    if (!res.ok) {
-      console.error(`News API returned an error: ${res.statusText}`);
-      return [];
-    }
-    const apiResponse = await res.json();
-    return apiResponse.data || [];
-  } catch (error) {
-    console.error('Error fetching news list:', error);
-    return [];
-  }
-});
-
-export const fetchNewsBySlug = cache(async (slug: string): Promise<NewsArticleDetail | null> => {
-  if (!slug) return null;
-  try {
-    const res = await fetch(`${NEWS_API_BASE_URL}/api/news/slug/${slug}`, { next: { revalidate: 3600 } });
-    if (!res.ok) {
-      if (res.status !== 404) {
-        console.error(`News API returned an error for slug '${slug}': ${res.statusText}`);
-      }
-      return null;
-    }
-    const apiResponse = await res.json();
-    return apiResponse;
-  } catch (error) {
-    console.error(`Error fetching news article by slug '${slug}':`, error);
-    return null;
-  }
-});
 
 export const fetchMatchLineups = cache(async (fixtureId: string): Promise<MatchLineupData | null> => {
   if (!FOOTBALL_API_KEY) return null;
