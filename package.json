@@ -25,6 +25,7 @@
     "@tiptap/react": "^3.0.6",
     "@tiptap/starter-kit": "^3.0.6",
     "cheerio": "^1.1.0",
+    "country-flag-icons": "^1.5.19",
     "date-fns": "^4.1.0",
     "editorjs-react-renderer": "^3.5.1",
     "framer-motion": "^12.23.1",

@@ -1,6 +1,7 @@
 // src/components/LeftSidebar.tsx
 
 import Image from "next/image";
+import { getTranslations } from 'next-intl/server';
 import Link from "next/link";
 import { Player } from "@/data/mockData";
 import { NewsArticleSummary } from "@/lib/types";
