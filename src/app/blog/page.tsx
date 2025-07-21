@@ -1,10 +1,12 @@
+// src/app/blog/page.tsx
+
 import Link from 'next/link';
 import Header from '@/components/Header';
 import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
 import Image from 'next/image';
-import { IPost, ICategory, ITag } from '@/models/Post'; // Ensure ICategory and ITag are correctly exported from here
+import { IPost, ICategory, ITag } from '@/models/Post'; 
 import dbConnect from '@/lib/mongodb';
 import Post from '@/models/Post';
 import Category from '@/models/Category';
@@ -12,7 +14,7 @@ import Tag from '@/models/Tag';
 import { unstable_noStore as noStore } from 'next/cache';
 
 async function getBlogPageData() {
-    noStore(); // Opt-out of static rendering for dynamic data
+    noStore();
     await dbConnect();
 
     const [posts, categories, tags] = await Promise.all([
@@ -21,8 +23,6 @@ async function getBlogPageData() {
         Tag.find({}).sort({ name: 1 }).lean()
     ]);
 
-    // JSON.parse(JSON.stringify()) is used to serialize Mongoose documents (even lean ones)
-    // for safe passing through Next.js server components, ensuring _id is a string etc.
     return {
         posts: JSON.parse(JSON.stringify(posts)),
         categories: JSON.parse(JSON.stringify(categories)),
@@ -31,22 +31,17 @@ async function getBlogPageData() {
 }
 
 const PostCard = ({ post }: { post: IPost }) => {
-    let summary = 'Read more'; // Default summary
+    let summary = 'Read more';
 
-    // --- FIX START ---
-    // Safely check if post.content is an array before trying to find on it
     if (Array.isArray(post.content)) {
         const paragraphBlock = post.content.find(b => b.type === 'p');
         if (paragraphBlock && paragraphBlock.value && paragraphBlock.value.html) {
             summary = paragraphBlock.value.html.replace(/<[^>]*>/g, '').slice(0, 100) + '...';
         }
     } else if (post.content && typeof post.content === 'object' && post.content.type === 'p' && post.content.value && post.content.value.html) {
-        // Fallback for cases where 'content' might be a single object instead of an array,
-        // and that object matches the expected content block structure.
         summary = post.content.value.html.replace(/<[^>]*>/g, '').slice(0, 100) + '...';
     }
-    // --- FIX END ---
-
+    
     const firstCategory = post.categories?.[0] as ICategory | undefined;
 
     return (
@@ -90,7 +85,6 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }
                 <ul className="space-y-2">
                     {categories.map(cat => (
                         <li key={cat._id.toString()}>
-                            {/* Use encodeURIComponent for URL safety */}
                             <Link href={`/blog/category/${encodeURIComponent(cat.name.toLowerCase())}`} className="text-gray-300 hover:text-blue-400 transition-colors block">
                                 {cat.name}
                             </Link>
@@ -121,12 +115,16 @@ export default async function BlogListPage() {
             <SportsNav />
             <div className="container mx-auto px-4 py-12">
 
-                {/* Fixed layout for BackButton and centered Blog title */}
-                <div className="relative mb-8">
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2">
+                {/* --- THIS IS THE FIXED HEADER SECTION --- */}
+                {/* On mobile, it's a flex column. On medium screens and up, it becomes a relative block. */}
+                <div className="mb-8 md:relative">
+                    {/* The BackButton wrapper. On desktop, it becomes absolutely positioned. */}
+                    <div className="md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2">
                         <BackButton />
                     </div>
-                    <h1 className="text-center text-4xl md:text-5xl font-extrabold pb-4 border-b border-gray-700">
+                    
+                    {/* The Title. On mobile it has margin-top. On desktop, the margin is removed. */}
+                    <h1 className="w-full text-center text-4xl md:text-5xl font-extrabold pb-4 border-b border-gray-700 mt-4 md:mt-0">
                         Blogs
                     </h1>
                 </div>

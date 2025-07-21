@@ -1,0 +1,42 @@
+/* --- Mobile First (Carousel is active) --- */
+.embla {
+  position: relative;
+  overflow: hidden;
+  /* Add a transition for smooth height changes on mobile */
+  transition: height 0.2s ease-in-out;
+}
+
+.embla__container {
+  display: flex;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.embla__slide {
+  position: relative;
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
+/* --- Desktop Styles (Carousel is inactive) --- */
+@media (min-width: 768px) {
+  .embla {
+    overflow: visible;
+    height: auto !important; /* Ensure JS-injected height is ignored */
+    transition: none; /* No transition on desktop */
+  }
+
+  .embla__container {
+    display: block; 
+  }
+
+  .embla__slide {
+    flex-basis: auto;
+    position: static;
+  }
+
+  .embla__slide:not(:last-child) {
+    margin-bottom: 1rem;
+  }
+}

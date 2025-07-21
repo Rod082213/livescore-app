@@ -1,33 +1,46 @@
-// src/components/MatchRow.tsx (UPDATED)
+// src/components/MatchRow.tsx
 
-import { Match } from "@/data/mockData";
+"use client";
+
+import { useState } from "react";
+import { Match, Odds } from "@/data/mockData"; // Assuming Odds type is exported
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Star, TrendingUp, Loader2 } from "lucide-react"; // Import Loader2
 import { generateSlug } from "@/lib/utils";
-import { predictOdds } from "@/lib/predictions"; // <--- 1. IMPORT THE NEW FUNCTION
+import { predictOdds } from "@/lib/predictions";
 
 const MatchRow = ({ match }: { match: Match }) => {
   const slug = generateSlug(match.homeTeam.name, match.awayTeam.name, match.id);
 
-  // --- 2. LOGIC FOR HANDLING REAL OR PREDICTED ODDS ---
-  // If real odds exist, use them. Otherwise, generate predicted odds.
-  const areOddsPredicted = !match.odds;
-  const displayOdds = match.odds || predictOdds(match.homeTeam.name, match.awayTeam.name);
-
-  // Determine the minimum odd to highlight the favorite, using the displayOdds.
-  const minOdd = Math.min(displayOdds.home, displayOdds.draw, displayOdds.away);
+  // --- 1. ADD NEW STATE FOR LOADING AND STORING ODDS ---
+  const [areOddsVisible, setAreOddsVisible] = useState(false);
+  const [isLoadingOdds, setIsLoadingOdds] = useState(false);
+  const [displayOdds, setDisplayOdds] = useState<Odds | null>(null);
 
   // Handle different time/status displays
   const renderTimeOrStatus = () => {
-    if (match.status === 'LIVE') {
-      return <p className="text-green-500 font-bold">{match.time}</p>;
-    }
-    if (match.status === 'FT') {
-      return <p className="text-gray-400">FT</p>;
-    }
-    const timeString = match.time?.split(' ')[0];
-    return <p>{timeString}</p>;
+    if (match.status === 'LIVE') return <p className="text-green-500 font-bold">{match.time}</p>;
+    if (match.status === 'FT') return <p className="text-gray-400">FT</p>;
+    return <p>{match.time?.split(' ')[0]}</p>;
+  };
+
+  // --- 2. UPDATE THE CLICK HANDLER ---
+  const handleShowOdds = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    setIsLoadingOdds(true);
+
+    // Simulate a small network delay so the preloader is visible
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Calculate and store the odds
+    const calculatedOdds = match.odds || predictOdds(match.homeTeam.name, match.awayTeam.name);
+    setDisplayOdds(calculatedOdds);
+
+    setIsLoadingOdds(false);
+    setAreOddsVisible(true);
   };
 
   return (
@@ -36,9 +49,7 @@ const MatchRow = ({ match }: { match: Match }) => {
       className="flex items-center p-3 text-sm text-gray-300 bg-[#2b3341] rounded-lg hover:bg-[#343c4c] transition-colors"
     >
       {/* Time/Status Column */}
-      <div className="w-14 text-center flex-shrink-0">
-        {renderTimeOrStatus()}
-      </div>
+      <div className="w-14 text-center flex-shrink-0">{renderTimeOrStatus()}</div>
       
       {/* Teams Column */}
       <div className="flex-grow mx-4">
@@ -52,39 +63,48 @@ const MatchRow = ({ match }: { match: Match }) => {
         </div>
       </div>
 
-      {/* --- 3. UPDATED ODDS COLUMN --- */}
-      {/* This column now always displays odds, either real or predicted. */}
+      {/* --- 3. UPDATED CONDITIONAL RENDERING FOR ODDS/BUTTON --- */}
       <div className="hidden md:flex justify-around items-center w-48 text-center font-semibold flex-shrink-0">
-        <span 
-          title={areOddsPredicted ? "Predicted Odd" : "Home Win Odd"}
-          className={`px-2 py-1 rounded-md transition-colors ${
-            displayOdds.home === minOdd 
-              ? areOddsPredicted ? 'bg-blue-900/50 text-white' : 'bg-yellow-800/70 text-white' // Style predicted favorites differently
-              : 'text-gray-300'
-          }`}
-        >
-          {displayOdds.home.toFixed(2)}
-        </span>
-        <span 
-          title={areOddsPredicted ? "Predicted Odd" : "Draw Odd"}
-          className={`px-2 py-1 rounded-md transition-colors ${
-            displayOdds.draw === minOdd 
-              ? areOddsPredicted ? 'bg-blue-900/50 text-white' : 'bg-yellow-800/70 text-white'
-              : 'text-gray-300'
-          }`}
-        >
-          {displayOdds.draw.toFixed(2)}
-        </span>
-        <span
-          title={areOddsPredicted ? "Predicted Odd" : "Away Win Odd"}
-          className={`px-2 py-1 rounded-md transition-colors ${
-            displayOdds.away === minOdd 
-              ? areOddsPredicted ? 'bg-blue-900/50 text-white' : 'bg-yellow-800/70 text-white'
-              : 'text-gray-300'
-          }`}
-        >
-          {displayOdds.away.toFixed(2)}
-        </span>
+        {areOddsVisible && displayOdds ? (
+          // --- RENDER ODDS ---
+          <>
+            {((): JSX.Element => {
+              const areOddsPredicted = !match.odds;
+              const minOdd = Math.min(displayOdds.home, displayOdds.draw, displayOdds.away);
+              const getOddClass = (odd: number) => `px-2 py-1 rounded-md transition-colors ${ odd === minOdd ? 'bg-blue-900/50 text-white' : 'text-gray-300' }`;
+
+              return (
+                <>
+                  <span title={areOddsPredicted ? "Predicted Odd" : "Home Win Odd"} className={getOddClass(displayOdds.home)}>
+                    {displayOdds.home.toFixed(2)}
+                  </span>
+                  <span title={areOddsPredicted ? "Predicted Odd" : "Draw Odd"} className={getOddClass(displayOdds.draw)}>
+                    {displayOdds.draw.toFixed(2)}
+                  </span>
+                  <span title={areOddsPredicted ? "Predicted Odd" : "Away Win Odd"} className={getOddClass(displayOdds.away)}>
+                    {displayOdds.away.toFixed(2)}
+                  </span>
+                </>
+              );
+            })()}
+          </>
+        ) : (
+          // --- RENDER BUTTON (WITH PRELOADER LOGIC) ---
+          <button
+            onClick={handleShowOdds}
+            disabled={isLoadingOdds} // Disable button while loading
+            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-md border border-blue-500/50 text-blue-400 font-semibold text-xs hover:bg-blue-500/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isLoadingOdds ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <>
+                <TrendingUp size={16} />
+                Show Odds
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Score/Placeholder Column */}
@@ -95,10 +115,7 @@ const MatchRow = ({ match }: { match: Match }) => {
             <span>{match.score.split('-')[1].trim()}</span>
           </>
         ) : (
-          <>
-            <span>-</span>
-            <span>-</span>
-          </>
+          <span>-</span>
         )}
       </div>
 

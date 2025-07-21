@@ -1,6 +1,7 @@
 // src/lib/api.ts
 
 import { cache } from 'react';
+import Team from '@/models/Team';
 import dbConnect from './mongodb';
 import HighlightModel, { IHighlight } from '@/models/Highlight';
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails } from "@/data/mockData";
@@ -60,6 +61,68 @@ export function groupMatchesByLeague(matches: Match[]): LeagueGroup[] {
   }, {} as Record<string, LeagueGroup>);
   return Object.values(grouped);
 }
+
+export const getTeamDetails = async (teamId: number) => {
+  console.log(`[GET_TEAM_DETAILS] Process started for team ID: ${teamId}`);
+  
+  await connectToDB();
+
+  const teamFromDb = await Team.findOne({ apiId: teamId });
+
+  if (!teamFromDb) {
+    console.error(`[GET_TEAM_DETAILS] Team with apiId ${teamId} not found in the database.`);
+    return null; // The team must exist from the initial sync
+  }
+
+  const CACHE_DURATION_HOURS = 6;
+  let isCacheValid = false;
+
+  if (teamFromDb.detailsLastUpdatedAt) {
+    const ageInHours = (new Date().getTime() - teamFromDb.detailsLastUpdatedAt.getTime()) / (1000 * 60 * 60);
+    if (ageInHours < CACHE_DURATION_HOURS) {
+      isCacheValid = true;
+    }
+  }
+
+  // If we have fresh data in the cache, return it immediately
+  if (isCacheValid) {
+    console.log(`[GET_TEAM_DETAILS] Serving fresh data for team ${teamId} from DB cache.`);
+    return JSON.parse(JSON.stringify(teamFromDb));
+  }
+
+  // --- If cache is invalid or missing, fetch from API ---
+  console.log(`[GET_TEAM_DETAILS] Cache invalid or missing. Fetching new data for team ${teamId} from Football API.`);
+  
+  try {
+    // Fetch all details in parallel
+    const [fixtures, squad] = await Promise.all([
+      fetchTeamFixtures(teamId.toString()), // Assumes this function exists in your api.ts
+      fetchTeamSquad(teamId.toString()),   // Assumes this function exists in your api.ts
+    ]);
+    
+    // Now, update the team document in the database with the new data
+    const updatedTeam = await Team.findOneAndUpdate(
+      { apiId: teamId },
+      {
+        $set: {
+          fixtures: fixtures,
+          squad: squad,
+          detailsLastUpdatedAt: new Date(), // <-- Update the timestamp!
+        },
+      },
+      { new: true } // This option returns the document after the update has been applied
+    );
+
+    console.log(`[GET_TEAM_DETAILS] Successfully fetched and updated DB for team ${teamId}.`);
+    return JSON.parse(JSON.stringify(updatedTeam));
+
+  } catch (error) {
+    console.error(`[GET_TEAM_DETAILS] Failed to fetch or save details for team ${teamId}:`, error);
+    // If the API fails, it's better to return the old data than nothing at all
+    return JSON.parse(JSON.stringify(teamFromDb));
+  }
+};
+
 function mapApiStandingToStanding(apiStanding: ApiStanding): Standing {
     return {
         rank: apiStanding.rank, team: { id: apiStanding.team.id, name: apiStanding.team.name, logo: apiStanding.team.logo },
