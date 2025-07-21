@@ -1,6 +1,7 @@
 // src/components/Footer.tsx
 
-import { FaGithub, FaTwitter, FaRegCopyright } from 'react-icons/fa';
+import {  FaRegCopyright, FaFacebook, FaMedium, FaPinterest } from 'react-icons/fa';
+import XLogoIcon from '@/components/icons/XLogoIcon';
 
 const Footer = () => {
   return (
@@ -57,8 +58,10 @@ const Footer = () => {
           <div>
             <h2 className="text-lg font-bold text-white mb-4">Follow Us</h2>
             <div className="flex space-x-4">
-              <a href="#" aria-label="GitHub" className="text-gray-400 hover:text-white transition-colors"><FaGithub size={24} /></a>
-              <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-white transition-colors"><FaTwitter size={24} /></a>
+              <a href="https://web.facebook.com/todaylivescoresofficial?_rdc=1&_rdr#" aria-label="Facebook" className="text-gray-400 hover:text-white transition-colors"><FaFacebook size={24} /></a>
+              <a href="https://x.com/todaylivescores" aria-label="Follow us on X" className="text-gray-400 hover:text-white transition-colors"> <XLogoIcon className="h-5 w-5 text-gray-400 hover:text-white" /></a>
+            <a href="https://medium.com/@todaylivescoressa" aria-label="Follow us on X" className="text-gray-400 hover:text-white transition-colors"> <FaMedium className="h-5 w-5 text-gray-400 hover:text-white" /></a>
+            <a href="https://za.pinterest.com/todaylivescores" aria-label="Follow us on X" className="text-gray-400 hover:text-white transition-colors"> <FaPinterest className="h-5 w-5 text-gray-400 hover:text-white" /></a>
             </div>
           </div>
         </div>

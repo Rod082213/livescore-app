@@ -13,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*', // This rule applies to all crawlers
       allow: '/',     // Allow crawling of all pages
-      disallow: '/admin/create-post', // IMPORTANT: Block crawlers from the admin panel
+      disallow: '/admin', // IMPORTANT: Block crawlers from the admin panel
     },
     sitemap: ${baseUrl}/sitemap.xml, 
   };
