@@ -1,21 +1,22 @@
-'use client'; 
+'use client';
 
 import Image from "next/image";
 import Link from "next/link";
-import { Player } from "@/data/mockData";
-import { NewsArticleSummary } from "@/lib/types";
-import ClientOnly from "./ClientOnly";
-import { Carousel } from "./Carousel"; 
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { Player, NewsArticleSummary } from "@/lib/types"; // Assuming types are in /lib/types
+import { Carousel } from "./Carousel"; // Your custom Carousel component
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery"; // Your custom hook
 
-// Helper function for safe date formatting
+// A small, robust helper function for formatting dates
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Date unavailable';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) {
+  try {
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  } catch (error) {
     return 'Invalid Date';
   }
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
 interface LeftSidebarProps {
@@ -23,57 +24,106 @@ interface LeftSidebarProps {
   latestNews: NewsArticleSummary[];
 }
 
+/**
+ * A responsive sidebar that displays a carousel on mobile and a 
+ * full vertical list of 5 items on desktop.
+ */
 const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  // This hook determines if the screen is mobile or desktop.
+  // The 'lg' breakpoint (1024px) is a good switch point.
+  const isMobile = useMediaQuery('(max-width: 1023px)');
+
+  // Slicing logic is handled here to ensure it never displays more than 5
+  const teamForDisplay = Array.isArray(teamOfTheWeek) ? teamOfTheWeek.slice(0, 5) : [];
+  const newsForDisplay = Array.isArray(latestNews) ? latestNews.slice(0, 5) : [];
 
   return (
-    <div className="space-y-6">
+    <aside className="space-y-6">
       
       {/* --- TEAM OF THE WEEK WIDGET --- */}
-      {/* --- THIS IS THE FIX: Added `h-fit` here --- */}
-      <div className="bg-[#2b3341] rounded-lg p-4 h-fit">
-        <h2 className="text-md font-bold text-white mb-3">Team of the Week</h2>
-        {teamOfTheWeek?.length > 0 ? (
-          <Carousel active={isMobile}>
-            {teamOfTheWeek.slice(0, 5).map((player) => (
-              <div key={player.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {player.logo ? <Image src={player.logo} alt={player.name} width={32} height={32} className="rounded-full bg-gray-600 object-cover"/> : <div className="w-8 h-8 rounded-full bg-gray-600 flex-shrink-0 flex items-center justify-center text-white font-bold text-sm">{player.name.charAt(0)}</div>}
-                  <span className="font-medium text-sm text-white">{player.name}</span>
+      <div className="bg-[#2b3341] rounded-lg p-4 shadow-lg">
+        <h3 className="text-lg font-bold text-white mb-4 border-b border-gray-700 pb-2">
+          Team of the Week
+        </h3>
+        {teamForDisplay.length > 0 ? (
+          isMobile ? (
+            // --- MOBILE VIEW: RENDER CAROUSEL ---
+            <Carousel options={{ loop: true }}>
+              {teamForDisplay.map((player) => (
+                <div key={player.id || player.name} className="flex items-center justify-between gap-3 flex-[0_0_100%]">
+                  <div className="flex items-center gap-3">
+                    <Image src={player.logo} alt={`${player.name} logo`} width={32} height={32} className="rounded-full bg-gray-600 object-cover"/>
+                    <span className="font-medium text-sm text-white">{player.name}</span>
+                  </div>
+                  <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded-md">{parseFloat(player.rating).toFixed(1)}</span>
                 </div>
-                <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded-md">{player.rating}</span>
-              </div>
-            ))}
-          </Carousel>
-        ) : <div className="text-center text-gray-400 py-10 text-sm">Player data is currently unavailable.</div>}
+              ))}
+            </Carousel>
+          ) : (
+            // --- DESKTOP VIEW: RENDER VERTICAL LIST ---
+            <ul className="space-y-4">
+              {teamForDisplay.map((player) => (
+                <li key={player.id || player.name} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Image src={player.logo} alt={`${player.name} logo`} width={32} height={32} className="rounded-full bg-gray-600 object-cover"/>
+                    <span className="font-medium text-sm text-white">{player.name}</span>
+                  </div>
+                  <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded-md">{parseFloat(player.rating).toFixed(1)}</span>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : (
+          <p className="text-center text-gray-400 py-8 text-sm">Team of the Week data is unavailable.</p>
+        )}
       </div>
 
       {/* --- LATEST NEWS WIDGET --- */}
-      {/* --- THIS IS THE FIX: Added `h-fit` here --- */}
-      <div className="bg-[#2b3341] rounded-lg p-4 h-fit">
-        <h2 className="text-md font-bold text-white mb-4">Latest News</h2>
-        {latestNews?.length > 0 ? (
-          <Carousel active={isMobile}>
-            {latestNews.slice(0, 5).map((article) => (
-              <Link href={`/news/${article.slug}`} className="flex items-start gap-3 group" key={article.id || article._id}>
-                <div className="relative w-20 h-16 flex-shrink-0">
-                  <Image src={article.image_url} alt={article.title} fill sizes="80px" className="rounded-md object-cover" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-teal-400 text-xs font-semibold mb-1 uppercase">{article.keywords?.split(',')[0] || 'News'}</p>
-                  <p className="font-medium text-sm text-white group-hover:underline leading-tight">{article.title}</p>
-                  <p className="text-gray-400 text-xs mt-1">
-                    <ClientOnly>{formatDate(article.publishedAt)}</ClientOnly>
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </Carousel>
+      <div className="bg-[#2b3341] rounded-lg p-4 shadow-lg">
+        <h3 className="text-lg font-bold text-white mb-4 border-b border-gray-700 pb-2">
+          Latest News
+        </h3>
+        {newsForDisplay.length > 0 ? (
+          isMobile ? (
+            // --- MOBILE VIEW: RENDER CAROUSEL ---
+            <Carousel options={{ loop: true }}>
+              {newsForDisplay.map((article) => (
+                <Link href={`/news/${article.slug}`} className="flex items-start gap-3 group flex-[0_0_100%]" key={article.id || article.slug}>
+                  <div className="relative w-24 h-16 flex-shrink-0">
+                    <Image src={article.image_url || '/placeholder-image.jpg'} alt={article.title} fill sizes="100px" className="rounded-md object-cover"/>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-teal-400 text-xs font-semibold mb-1 uppercase">{article.keywords?.split(',')[0] || 'News'}</p>
+                    <p className="font-semibold text-sm text-white group-hover:text-blue-400 transition-colors leading-tight">{article.title}</p>
+                    <p className="text-gray-400 text-xs mt-1">{formatDate(article.publishedAt)}</p>
+                  </div>
+                </Link>
+              ))}
+            </Carousel>
+          ) : (
+            // --- DESKTOP VIEW: RENDER VERTICAL LIST ---
+            <ul className="space-y-4">
+              {newsForDisplay.map((article) => (
+                <li key={article.id || article.slug}>
+                  <Link href={`/news/${article.slug}`} className="flex items-start gap-3 group">
+                    <div className="relative w-24 h-16 flex-shrink-0">
+                      <Image src={article.image_url || '/placeholder-image.jpg'} alt={article.title} fill sizes="100px" className="rounded-md object-cover"/>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-teal-400 text-xs font-semibold mb-1 uppercase">{article.keywords?.split(',')[0] || 'News'}</p>
+                      <p className="font-semibold text-sm text-white group-hover:text-blue-400 transition-colors leading-tight">{article.title}</p>
+                      <p className="text-gray-400 text-xs mt-1">{formatDate(article.publishedAt)}</p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )
         ) : (
-          <div className="text-center text-gray-400 py-10 text-sm">No recent news available.</div>
+          <p className="text-center text-gray-400 py-8 text-sm">No recent news available.</p>
         )}
       </div>
-    </div>
+    </aside>
   );
 };
 
