@@ -14,13 +14,47 @@ import HighlightsClientPage from "./HighlightsClientPage";
 
 // Import your API functions
 import { fetchDailyMatchesAndHighlights, fetchTeamOfTheWeek, fetchTopLeagues } from "@/lib/api";
-import { fetchNewsList } from "@/lib/news-api"; // <-- IMPORT THE REAL NEWS FETCHER
+import { fetchNewsList } from "@/lib/news-api";
 
-// Metadata for SEO (no changes needed here)
+// --- SEO METADATA FOR THE HIGHLIGHTS PAGE ---
 export const metadata: Metadata = {
   title: 'Daily Football Highlights & Match Previews',
   description: 'Catch up on all the action with daily football highlights. See live scores, finished match videos, and schedules for upcoming games all in one place.',
-  // ... other metadata properties
+  
+  // ADDED: The canonical URL for the highlights page.
+  // This must be an absolute URL.
+  alternates: {
+    canonical: 'https://todaylivescores.com/highlights', // <-- Use your actual domain here
+  },
+
+  // ADDED: Explicit instructions for search engine crawlers.
+  robots: {
+    index: true,  // Allow this page to be indexed
+    follow: true, // Allow crawlers to follow links from this page
+  },
+
+  // ADDED: Open Graph and Twitter tags for rich social media sharing.
+  openGraph: {
+    title: 'Daily Football Highlights | TodayLiveScores',
+    description: 'Catch up on all the action with daily football highlights and match videos.',
+    url: 'https://todaylivescores.com/highlights', // <-- Use your actual domain here
+    siteName: 'TodayLiveScores',
+    images: [
+      {
+        url: '/social-card-highlights.png', // IMPORTANT: Create this image (1200x630px)
+        width: 1200,
+        height: 630,
+        alt: 'Daily Football Highlights on TodayLiveScores',
+      },
+    ],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Daily Football Highlights | TodayLiveScores',
+    description: 'Catch up on all the action with daily football highlights and match videos.',
+    images: ['/social-card-highlights.png'], // Use the same image
+  },
 };
 
 
@@ -30,27 +64,31 @@ export default async function HighlightsPage() {
   const today = new Date();
   const formattedDate = format(today, 'yyyy-MM-dd');
 
+  // Your data fetching logic is excellent - concurrent and resilient.
   const [
     initialDailyData,
     teamOfTheWeek,
     topLeagues,
-    allNews, // <-- FETCH THE REAL NEWS DATA
+    allNews,
   ] = await Promise.all([
     fetchDailyMatchesAndHighlights(formattedDate),
     fetchTeamOfTheWeek(),
     fetchTopLeagues(),
-    fetchNewsList(), // <-- CALL THE REAL NEWS FETCHER
-  ]);
+    fetchNewsList(),
+  ]).catch(error => {
+    // Graceful error handling in case any API fails
+    console.error("Failed to fetch highlights page data:", error);
+    return [[], [], [], []];
+  });
 
-  // Use the real news data for the sidebar, just like on the news page
-  const latestNewsForSidebar = allNews.slice(0, 5);
+  // Slice news for the sidebar, with a check in case it's empty
+  const latestNewsForSidebar = Array.isArray(allNews) ? allNews.slice(0, 5) : [];
 
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
       <Header />
       <SportsNav />
       
-      {/* Use the same flexbox layout as your news page */}
       <div className="container mx-auto px-4 py-8">
         <BackButton />
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-8 border-b border-gray-700 pb-4">

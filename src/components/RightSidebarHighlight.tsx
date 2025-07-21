@@ -95,7 +95,7 @@ const RightSidebarHighlight = ({
                 
             </div>
         </aside>
-        // --- The ChallengeModal component has been removed from here ---
+      
     );
 };
 

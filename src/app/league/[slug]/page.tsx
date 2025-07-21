@@ -18,36 +18,81 @@ import {
   fetchTopLeagues,
   fetchTeamOfTheWeek,
 } from '@/lib/api';
-import { 
-  fetchNewsList // Corrected: This should be from news-api
-} from '@/lib/api';
-import { fetchNewsList as fetchNewsListFromSource } from '@/lib/news-api'; // Aliasing to avoid name conflict
-import { createLeagueSlug } from '@/lib/utils'; // <-- IMPORT THE MISSING FUNCTION
+import { fetchNewsList as fetchNewsListFromSource } from '@/lib/news-api'; // Aliased to avoid name conflict
+import { createLeagueSlug } from '@/lib/utils';
 
 type Props = { params: { slug: string } };
 
-// Helper function to get the ID from a slug like "premier-league-39"
+// Helper function to get the ID from a slug
 const getLeagueIdFromSlug = (slug: string): string | null => {
     const parts = slug.split('-');
     const potentialId = parts[parts.length - 1];
     return /^\d+$/.test(potentialId) ? potentialId : null;
 };
 
-// --- generateMetadata function (remains the same) ---
+// --- generateMetadata function WITH CANONICAL AND ROBOTS TAGS ---
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const leagueId = getLeagueIdFromSlug(params.slug);
-  if (!leagueId) return { title: 'Invalid League' };
+  if (!leagueId) {
+    return { 
+      title: 'Invalid League',
+      robots: { index: false } // Don't index invalid pages
+    };
+  }
   
   const topLeagues = await fetchTopLeagues();
   const league = topLeagues.find(l => l.id.toString() === leagueId);
-  if (!league) return { title: 'League Not Found' };
+  if (!league) {
+    return { 
+      title: 'League Not Found',
+      robots: { index: false } // Don't index non-existent leagues
+    };
+  }
 
-  const title = `${league.name} - Standings & Table`;
-  const description = `View the live football standings and table for the ${league.name}. See team rankings, points, games played, and recent form.`;
-  return { title, description };
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com';
+  const canonicalUrl = `${siteUrl}/league/${params.slug}`;
+  const title = `${league.name} - Standings, Table & Live Scores`;
+  const description = `View the live football standings and table for the ${league.name}. See team rankings, points, games played, and recent form on TodayLiveScores.`;
+
+  return { 
+    title, 
+    description,
+    
+    // ADDED: The canonical URL for this specific league page.
+    alternates: {
+      canonical: canonicalUrl,
+    },
+
+    // ADDED: Explicit instructions for search engine crawlers.
+    robots: {
+      index: true,
+      follow: true,
+    },
+
+    // ADDED: Open Graph and Twitter tags for rich social sharing.
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'TodayLiveScores',
+      images: [
+        {
+          url: league.logo, // Dynamically use the league's logo!
+          alt: `${league.name} logo`,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: [league.logo],
+    },
+  };
 }
 
-// --- The main page component ---
+// --- The main page component (no changes needed) ---
 export default async function LeagueStandingsPage({ params }: Props) {
   const leagueId = getLeagueIdFromSlug(params.slug);
   if (!leagueId) notFound();
@@ -57,7 +102,7 @@ export default async function LeagueStandingsPage({ params }: Props) {
       fetchStandings(leagueId),
       fetchTopLeagues(),
       fetchTeamOfTheWeek(),
-      fetchNewsListFromSource() // Use the aliased import
+      fetchNewsListFromSource()
   ]);
   
   const leagueInfo = topLeagues.find(l => l.id.toString() === leagueId);
@@ -70,14 +115,14 @@ export default async function LeagueStandingsPage({ params }: Props) {
       <Header />
       <SportsNav />
       <div className="container mx-auto px-4 py-8">
-      <BackButton text="Back to Teams List" />
-          <div className="flex items-center gap-4 mb-6">
-              <Image src={leagueInfo.logo} alt={leagueInfo.name} width={64} height={64} />
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white">{leagueInfo.name}</h1>
-                <p className="text-gray-400">League Standings</p>
-              </div>
+        <BackButton />
+        <div className="flex items-center gap-4 mb-6">
+            <Image src={leagueInfo.logo} alt={leagueInfo.name} width={64} height={64} />
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white">{leagueInfo.name}</h1>
+              <p className="text-gray-400">League Standings</p>
             </div>
+        </div>
         <div className="lg:flex lg:gap-8">
           
           <aside className="w-full lg:w-64 lg:order-1 flex-shrink-0 mb-8 lg:mb-0 lg:sticky lg:top-8 lg:self-start">
@@ -88,10 +133,6 @@ export default async function LeagueStandingsPage({ params }: Props) {
           </aside>
 
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
-           
-            
-           
-            
             <div className="bg-[#2b3341] rounded-lg overflow-hidden">
               <table className="w-full text-sm text-left">
                  <thead className="bg-gray-900/50">
@@ -139,11 +180,12 @@ export default async function LeagueStandingsPage({ params }: Props) {
   );
 }
 
-// --- generateStaticParams function IS NOW CORRECT ---
+// --- generateStaticParams function is correct ---
 export async function generateStaticParams() {
     const topLeagues = await fetchTopLeagues();
+    if (!topLeagues || topLeagues.length === 0) return [];
+
     return topLeagues.map(league => ({
-        // It can now find and use the createLeagueSlug function.
         slug: createLeagueSlug(league.name, league.id),
     }));
 }

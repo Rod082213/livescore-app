@@ -1,5 +1,7 @@
 // src/app/match/[slug]/page.tsx
 
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
@@ -8,18 +10,106 @@ import MatchHeader from '@/components/match/MatchHeader';
 import MatchTimeline from '@/components/match/MatchTimeline';
 import MatchStatistics from '@/components/match/MatchStatistics';
 import HeadToHead from '@/components/match/HeadToHead';
-import MatchPrediction from '@/components/match/PredictionForm'; // Or your renamed component
+import MatchPrediction from '@/components/match/PredictionForm';
 import WelcomeOffer from '@/components/match/WelcomeOffer';
 import MatchDescription from '@/components/match/MatchDescription';
 import MatchLineups from '@/components/match/MatchLineups';
 import MatchHighlightsVideo from '@/components/match/MatchHighlightsVideo';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { fetchMatchDetailsById, getMatchHighlights, fetchMatchLineups } from '@/lib/api'; 
-import { Highlight, Match } from '@/lib/types';
-import { format, subMonths } from 'date-fns';
+import { fetchMatchDetailsById, getMatchHighlights, fetchMatchLineups } from '@/lib/api';
+import { Highlight } from '@/lib/types';
+import { format } from 'date-fns';
 
-// --- (Your generateFakeApiH2hData function would be here if you're using it) ---
+// --- DYNAMIC METADATA GENERATION (WITH FIX) ---
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const { slug } = params;
+  const slugParts = slug.split('-');
+  const matchId = slugParts[slugParts.length - 1];
+
+  if (!matchId || isNaN(parseInt(matchId))) {
+    return { title: 'Match Not Found' };
+  }
+
+  // Fetch the data needed for metadata
+  const match = await fetchMatchDetailsById(matchId);
+
+  // If match not found, return default metadata for the 404 page
+  if (!match) {
+    return {
+      title: 'Match Not Found',
+      robots: { index: false, follow: false }, // Don't index this error page
+    };
+  }
+
+  const { homeTeam, awayTeam, status, score, league } = match;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com';
+  const canonicalUrl = `${siteUrl}/match/${slug}`;
+  
+  let metaTitle = `${homeTeam.name} vs ${awayTeam.name} - Match Preview`;
+  let metaDescription = `Get ready for the ${league.name} match between ${homeTeam.name} and ${awayTeam.name}. Check H2H stats, form, and predictions.`;
+
+  // Dynamically change title and description based on match status
+  switch (status) {
+    case 'LIVE':
+    case 'HT':
+      metaTitle = `LIVE: ${homeTeam.name} vs ${awayTeam.name} (${score.home}-${score.away}) | ${league.name} Score`;
+      metaDescription = `Follow live score updates, stats, and key events for the ${homeTeam.name} vs ${awayTeam.name} match. Current score: ${score.home}-${score.away}.`;
+      break;
+    case 'FT':
+      metaTitle = `Result: ${homeTeam.name} ${score.home} - ${score.away} ${awayTeam.name} | Highlights & Stats`;
+      metaDescription = `See the final result, full stats, and watch video highlights for the ${league.name} match between ${homeTeam.name} and ${awayTeam.name}. Final score: ${score.home}-${score.away}.`;
+      break;
+  }
+  
+  // --- THIS IS THE FIX ---
+  // Create a safe date by checking if the timestamp is a valid number.
+  // If it's not valid (e.g., undefined, null, NaN), fall back to the current date.
+  const publishedDate = match.timestamp && !isNaN(match.timestamp)
+    ? new Date(match.timestamp * 1000)
+    : new Date();
+  
+  return {
+    title: metaTitle,
+    description: metaDescription,
+    
+    // Canonical and Robots tags
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+
+    // Open Graph and Twitter tags for social sharing
+    openGraph: {
+      title: metaTitle,
+      description: metaDescription,
+      url: canonicalUrl,
+      siteName: 'TodayLiveScores',
+      images: [
+        {
+          url: '/social-card-match.png', // Create a generic match social card (1200x630px)
+          width: 1200,
+          height: 630,
+          alt: `Match details for ${homeTeam.name} vs ${awayTeam.name}`,
+        },
+      ],
+      type: 'article',
+      // Use the safe publishedDate variable here to prevent the RangeError
+      publishedTime: publishedDate.toISOString(),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: metaTitle,
+      description: metaDescription,
+      images: ['/social-card-match.png'],
+    },
+  };
+}
+
+
+// --- THE PAGE COMPONENT ---
 
 export default async function MatchDetailPage({ params }: { params: { slug: string } }) {
   
@@ -27,8 +117,12 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
   const slugParts = slug.split('-');
   const matchId = slugParts[slugParts.length - 1];
 
-  if (!matchId || isNaN(parseInt(matchId))) { /* ... error handling ... */ }
+  if (!matchId || isNaN(parseInt(matchId))) {
+    notFound();
+  }
 
+  // Next.js automatically deduplicates this fetch call with the one in generateMetadata.
+  // It will only make one network request.
   const [matchDetails, lineups] = await Promise.all([
     fetchMatchDetailsById(matchId),
     fetchMatchLineups(matchId),
@@ -44,8 +138,6 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
   if (isFinished) {
     highlights = await getMatchHighlights(matchDetails);
   }
-
-  // ... (your h2hDataToDisplay logic here) ...
 
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
@@ -65,12 +157,11 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
             <MatchLineups lineups={lineups} />
             <MatchStatistics statistics={matchDetails.statistics} />
             <HeadToHead 
-              h2hData={matchDetails.h2h} // or h2hDataToDisplay
+              h2hData={matchDetails.h2h}
               teams={{ home: matchDetails.homeTeam, away: matchDetails.awayTeam }} 
             />
           </div>
 
-          {/* --- THIS IS THE CORRECTED SECTION --- */}
           <div className="lg:col-span-1 space-y-6 lg:sticky top-6 h-fit">
             <MatchPrediction 
               form={matchDetails.form}
@@ -78,11 +169,6 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
               status={matchDetails.status}
               score={matchDetails.score}
             />
-            {/* 
-              NOTE: The MatchDescription component seems to have been replaced by the prediction component. 
-              If you have multiple widgets, they will all stack vertically without scrolling.
-              For example:
-            */}
             <MatchDescription />
             <WelcomeOffer />
           </div>

@@ -1,4 +1,4 @@
-// src/app/team/[slug]/page.tsx (CORRECTED)
+// src/app/team/[slug]/page.tsx
 
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
@@ -22,7 +22,6 @@ import LeagueStandings from '@/components/team/LeagueStandings';
 import SquadList from '@/components/team/SquadList';
 import BacktoTeamLists from "@/components/BacktoTeamLists";
 
-
 // Define the type for the destructured params for clarity
 type PageProps = {
   params: {
@@ -30,47 +29,91 @@ type PageProps = {
   };
 };
 
-// Helper function to extract the ID from a slug like "team-name-123"
+// Helper function to extract the ID from a slug
 const getTeamIdFromSlug = (slug: string): string | null => {
     const parts = slug.split('-');
     const potentialId = parts[parts.length - 1];
     return /^\d+$/.test(potentialId) ? potentialId : null;
 };
 
-// --- FIX #1: Destructure `slug` directly in the function signature ---
+// --- METADATA FUNCTION WITH CANONICAL AND ROBOTS TAGS ---
 export async function generateMetadata({ params: { slug } }: PageProps): Promise<Metadata> {
-  // Now we use the `slug` variable directly, instead of `params.slug`
   const teamId = getTeamIdFromSlug(slug);
 
   if (!teamId) {
-    return { title: 'Invalid Team URL' };
+    return { 
+      title: 'Invalid Team URL',
+      robots: { index: false } // Don't index invalid URLs
+    };
   }
 
   const teamInfo = await fetchTeamInfo(teamId);
   
   if (!teamInfo) {
-    return { title: 'Team Not Found' };
+    return { 
+      title: 'Team Not Found',
+      robots: { index: false } // Don't index pages for teams that weren't found
+    };
   }
 
   const team = teamInfo.team;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com';
+  const canonicalUrl = `${siteUrl}/team/${slug}`;
+  
   const dynamicTitle = `${team.name}: Live Scores, Fixtures & Standings`;
   const dynamicDescription = `Get the latest live scores, match schedule, league standings, and full squad list for ${team.name}. Follow all the action on TodayLiveScores.`;
 
   return {
     title: dynamicTitle,
     description: dynamicDescription,
+    
+    // ADDED: The canonical URL for this specific team page.
+    alternates: {
+      canonical: canonicalUrl,
+    },
+
+    // ADDED: Explicit instructions for search engine crawlers.
+    robots: {
+      index: true,
+      follow: true,
+    },
+
+    // ADDED: Open Graph and Twitter tags for rich social sharing.
+    openGraph: {
+      title: dynamicTitle,
+      description: dynamicDescription,
+      url: canonicalUrl,
+      siteName: 'TodayLiveScores',
+      // For a dynamic image, you can use the team's logo.
+      // Make sure the logo URL is absolute (https://...).
+      images: [
+        {
+          url: team.logo, // Using the team's logo for the social card
+          width: 250,     // Specify dimensions if known
+          height: 250,
+          alt: `${team.name} logo`,
+        },
+      ],
+      type: 'profile', // 'profile' is a good type for an entity like a sports team
+    },
+    twitter: {
+      card: 'summary',
+      title: dynamicTitle,
+      description: dynamicDescription,
+      images: [team.logo], // Use the team's logo here as well
+    },
   };
 }
 
-// --- FIX #2: Destructure `slug` directly in the function signature ---
+// --- Page Component (no changes needed here) ---
 export default async function TeamDetailPage({ params: { slug } }: PageProps) {
-  // Now we use the `slug` variable directly, instead of `params.slug`
   const teamId = getTeamIdFromSlug(slug);
 
   if (!teamId) {
     notFound(); 
   }
 
+  // Fetching is automatically deduplicated by Next.js
   const [teamInfo, fixtures, squad] = await Promise.all([
     fetchTeamInfo(teamId),
     fetchTeamFixtures(teamId),
@@ -121,6 +164,8 @@ export default async function TeamDetailPage({ params: { slug } }: PageProps) {
 // --- generateStaticParams is correct and needs no changes ---
 export async function generateStaticParams() {
   const allLeagues = await fetchAllTeamsFromAllLeagues();
+  if (!allLeagues || allLeagues.length === 0) return []; // Graceful fallback
+  
   const allTeams = allLeagues.flatMap(league => league.teams);
  
   return allTeams.map((team) => ({

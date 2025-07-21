@@ -1,7 +1,7 @@
 // src/app/contact/page.tsx
 
 import { Metadata } from 'next';
-import { Mail, Phone, MapPin, ServerCrash } from 'lucide-react';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 // Component Imports
 import Header from '@/components/Header';
@@ -9,7 +9,7 @@ import Footer from '@/components/Footer';
 import SportsNav from '@/components/SportsNav';
 import LeftSidebar from '@/components/LeftSidebar';
 import TeamSidebar from '@/components/TeamSidebar';
-import ContactForm from '@/components/contact/ContactForm'; // We will create this next
+import ContactForm from '@/components/contact/ContactForm';
 
 // Data Fetching Imports
 import { 
@@ -18,10 +18,38 @@ import {
 } from '@/lib/api';
 import { fetchNewsList } from '@/lib/news-api';
 
+// SEO metadata is already correctly configured
 export const metadata: Metadata = {
-  title: 'Contact Us | TLiveScores',
-  description: 'Get in touch with the TLiveScores team. Send us your questions, feedback, or partnership inquiries through our contact form.',
+  title: 'Contact Us | TodayLiveScores', 
+  description: 'Get in touch with the TodayLiveScores team. Send us your questions, feedback, or partnership inquiries through our contact form.',
+  alternates: {
+    canonical: 'https://todaylivescores.com/contact',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: 'Contact Us | TodayLiveScores',
+    description: 'Get in touch with our team for questions, feedback, or inquiries.',
+    url: 'https://todaylivescores.com/contact',
+    siteName: 'TodayLiveScores',
+    images: [{
+      url: '/social-card-contact.png',
+      width: 1200,
+      height: 630,
+      alt: 'Contact the TodayLiveScores team',
+    }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Contact Us | TodayLiveScores',
+    description: 'Get in touch with our team for questions, feedback, or inquiries.',
+    images: ['/social-card-contact.png'],
+  },
 };
+
 
 // A small component for displaying contact details
 const ContactInfo = () => (
@@ -32,23 +60,25 @@ const ContactInfo = () => (
         <Mail className="h-6 w-6 text-blue-400 flex-shrink-0" />
         <div>
           <h3 className="font-semibold text-white">Email Us</h3>
-          <a href="mailto:support@tlivescores.com" className="hover:text-blue-400 transition-colors">
-            support@tlivescores.com
+          <a href="mailto:support@todaylivescores.com" className="hover:text-blue-400 transition-colors">
+            support@todaylivescores.com
           </a>
         </div>
       </div>
+      {/* UPDATED: Phone number changed to a South African format */}
       <div className="flex items-center gap-4">
         <Phone className="h-6 w-6 text-blue-400 flex-shrink-0" />
         <div>
           <h3 className="font-semibold text-white">Call Us</h3>
-          <p>+1 (555) 123-4567</p>
+          <p>+27 (21) 555 0100</p>
         </div>
       </div>
+      {/* UPDATED: Address changed to a location in Cape Town for consistency */}
       <div className="flex items-center gap-4">
         <MapPin className="h-6 w-6 text-blue-400 flex-shrink-0" />
         <div>
           <h3 className="font-semibold text-white">Our Office</h3>
-          <p>123 Sports Lane, Media City</p>
+          <p>123 Waterfront Quay, Cape Town, 8001, South Africa</p>
         </div>
       </div>
     </div>
@@ -60,8 +90,9 @@ const MapEmbed = () => (
   <div className="bg-[#2b3341] p-6 rounded-lg">
     <h2 className="text-xl font-bold text-white mb-4">Find Us</h2>
     <div className="aspect-video rounded-lg overflow-hidden">
+      {/* UPDATED: The iframe src now points to Cape Town, South Africa */}
       <iframe
-        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.521260322283!2d106.81956135078593!3d-6.194741395503936!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5390917b759%3A0x6b45e67356080477!2sNational%20Monument!5e0!3m2!1sen!2sid!4v1625832349580!5m2!1sen!2sid"
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d423286.8322741989!2d18.06994797615962!3d-33.91426895304199!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1dcc500f8826eed7%3A0x687fe1fc2828aa87!2sCape%20Town%2C%20South%20Africa!5e0!3m2!1sen!2s!4v1678886450123!5m2!1sen!2s"
         width="100%"
         height="100%"
         style={{ border: 0 }}
@@ -75,14 +106,14 @@ const MapEmbed = () => (
 
 export default async function ContactPage() {
   
-  // Fetch data for the sidebars, just like on the teams list page
+  // Fetch data for the sidebars
   const [teamOfTheWeek, allNews, topLeagues] = await Promise.all([
     fetchTeamOfTheWeek(),
     fetchNewsList(),
     fetchTopLeagues(),
   ]);
 
-  const latestNewsForSidebar = allNews.slice(0, 3);
+  const latestNewsForSidebar = Array.isArray(allNews) ? allNews.slice(0, 3) : [];
 
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
@@ -90,7 +121,7 @@ export default async function ContactPage() {
       <SportsNav />
       <div className="container mx-auto px-4 py-8">
         
-        <h1 className="text-3xl font-bold text-white mb-8">Contact Us</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Contact Us</h1>
         <p className="text-gray-400 mb-8 max-w-3xl">
           Have a question, feedback, or a partnership inquiry? We’d love to hear from you. Please fill out the form below and our team will get back to you as soon as possible.
         </p>

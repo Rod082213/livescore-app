@@ -6,29 +6,88 @@ import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
 import Image from 'next/image';
+import { Metadata } from 'next';
 import { IPost, ICategory, ITag } from '@/models/Post'; 
 import dbConnect from '@/lib/mongodb';
 import Post from '@/models/Post';
 import Category from '@/models/Category';
 import Tag from '@/models/Tag';
-import { unstable_noStore as noStore } from 'next/cache';
 
+// --- SEO & PERFORMANCE ENHANCEMENTS ---
+
+// 1. Time-based Revalidation: Re-fetch data and rebuild the page every hour.
+// This is MUCH better for performance than noStore() for a blog index.
+// The page will be served statically from the cache (fast!) and updated in the background.
+export const revalidate = 3600; // Revalidate every hour (in seconds)
+
+// 2. SEO-Optimized Metadata for the Blog Index Page
+export const metadata: Metadata = {
+  // A more engaging and descriptive title
+  title: 'Latest Sports News & Analysis | TodayLiveScores Blog',
+  description: 'Explore in-depth articles, match previews, and expert analysis on football, basketball, and more. Stay updated with the latest news from the world of sports.',
+  
+  // The canonical URL for the main blog page
+  alternates: {
+    canonical: 'https://www.todaylivescores.com/blog', 
+  },
+
+  // Instructions for search engine crawlers
+  robots: {
+    index: true,  // Allow search engines to index this page
+    follow: true, // Allow search engines to follow links from this page
+  },
+
+  // Open Graph tags for social sharing
+  openGraph: {
+    title: 'Latest Sports News & Analysis | TodayLiveScores Blog',
+    description: 'In-depth articles, match previews, and expert analysis.',
+    url: '/blog',
+    siteName: 'TodayLiveScores',
+    images: [
+      {
+        url: '/social-card-blog.png', // Create a specific social card for the blog (1200x630px)
+        width: 1200,
+        height: 630,
+        alt: 'TodayLiveScores Blog - Sports News and Analysis',
+      },
+    ],
+    type: 'website',
+  },
+
+  // Twitter-specific tags
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Latest Sports News & Analysis | TodayLiveScores Blog',
+    description: 'In-depth articles, match previews, and expert analysis.',
+    images: ['/social-card-blog.png'],
+  },
+};
+
+
+// --- DATA FETCHING ---
 async function getBlogPageData() {
-    noStore();
+    // We removed noStore() to enable caching with `revalidate`
+    // noStore(); 
+    
     await dbConnect();
 
+    // Fetching data concurrently remains the best practice
     const [posts, categories, tags] = await Promise.all([
         Post.find({}).sort({ createdAt: -1 }).populate('categories', 'name').lean(),
         Category.find({}).sort({ name: 1 }).lean(),
         Tag.find({}).sort({ name: 1 }).lean()
     ]);
 
+    // The JSON.parse/stringify is a safe way to ensure data is serializable for the client
     return {
         posts: JSON.parse(JSON.stringify(posts)),
         categories: JSON.parse(JSON.stringify(categories)),
         tags: JSON.parse(JSON.stringify(tags))
     };
 }
+
+
+// --- COMPONENTS ---
 
 const PostCard = ({ post }: { post: IPost }) => {
     let summary = 'Read more';
@@ -106,6 +165,9 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }
     </aside>
 );
 
+
+// --- PAGE COMPONENT ---
+
 export default async function BlogListPage() {
     const { posts, categories, tags } = await getBlogPageData();
 
@@ -115,17 +177,13 @@ export default async function BlogListPage() {
             <SportsNav />
             <div className="container mx-auto px-4 py-12">
 
-                {/* --- THIS IS THE FIXED HEADER SECTION --- */}
-                {/* On mobile, it's a flex column. On medium screens and up, it becomes a relative block. */}
                 <div className="mb-8 md:relative">
-                    {/* The BackButton wrapper. On desktop, it becomes absolutely positioned. */}
                     <div className="md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2">
                         <BackButton />
                     </div>
                     
-                    {/* The Title. On mobile it has margin-top. On desktop, the margin is removed. */}
                     <h1 className="w-full text-center text-4xl md:text-5xl font-extrabold pb-4 border-b border-gray-700 mt-4 md:mt-0">
-                        Blogs
+                        Our Blog
                     </h1>
                 </div>
 
@@ -152,8 +210,3 @@ export default async function BlogListPage() {
         </div>
     );
 }
-
-export const metadata = {
-  title: 'Blog | All Posts',
-  description: 'Browse all the latest articles, categories, and tags.',
-};
