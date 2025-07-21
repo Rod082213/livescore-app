@@ -24,6 +24,12 @@
 }
 
 
+td,tr {
+    color: #e2e8f0 !important; /* Ensure table cell text is visible */
+    border: 1px solid #4a5568 !important; /* Darker border for visibility */
+}
+
+
 .ce-inline-tool-input{
     color:black !important;
 }

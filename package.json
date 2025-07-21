@@ -27,6 +27,8 @@
     "cheerio": "^1.1.0",
     "date-fns": "^4.1.0",
     "editorjs-react-renderer": "^3.5.1",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.1",
     "lucide-react": "^0.515.0",
     "mongodb": "^6.17.0",

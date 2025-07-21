@@ -1,0 +1,18 @@
+/* src/css/banner-slider.css */
+
+.embla {
+  overflow: hidden; /* Hides parts of slides that are outside the viewport */
+}
+
+.embla__container {
+  display: flex; /* Arranges slides in a row */
+  /* You might add optional styling like a gap between slides here */
+  /* gap: 1rem; */
+}
+
+.embla__slide {
+  flex: 0 0 100%; /* IMPORTANT: Makes each slide take up 100% of the container's width */
+  min-width: 0; /* Prevents flex items from overflowing their container */
+  position: relative; /* Essential for Next.js Image with fill prop */
+  height: 100%; /* IMPORTANT: Ensures the slide takes the height of its parent container */
+}
