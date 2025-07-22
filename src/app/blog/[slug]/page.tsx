@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     finalKeywords = generatedKeywords;
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const canonicalUrl = `${siteUrl}/blog/${post.slug}`;
   const authorName = post.author || 'TodayLiveScores Staff';
 
