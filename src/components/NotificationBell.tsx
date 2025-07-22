@@ -60,7 +60,10 @@ const NotificationBell = () => {
   };
 
   return (
-    <div className="relative md:static" ref={dropdownRef}>
+    // --- THIS IS THE FIX ---
+    // By removing `md:static`, this div remains `relative` on all screen sizes.
+    // This makes it the positioning anchor for the absolute-positioned dropdown menu.
+    <div className="relative" ref={dropdownRef}>
       <button 
         onClick={handleBellClick} 
         className="relative p-2 text-gray-300 hover:text-white transition-colors"
@@ -76,13 +79,12 @@ const NotificationBell = () => {
       </button>
 
       {isOpen && (
-        // --- THIS IS THE RESPONSIVE FIX ---
-        // On mobile (default): It's a fixed, full-width modal at the top of the screen.
-        // On medium screens and up (`md:`): It becomes an absolute-positioned dropdown.
+        // Now, this dropdown's `md:right-0` aligns it to the right edge
+        // of its immediate parent, which is exactly what we want.
         <div 
           className="
             fixed top-16 left-0 w-full bg-[#1d222d] border-b border-gray-700 z-50
-            md:absolute md:top-full md:left-auto md:right-0 md:mt-2 md:w-96 md:rounded-lg md:border
+            md:absolute md:top-full md:right-0 md:mt-2 md:w-96 md:rounded-lg md:border
           "
         >
           <div className="flex justify-between items-center p-3 border-b border-gray-700">

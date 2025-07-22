@@ -1,5 +1,3 @@
-// src/app/team/[slug]/page.tsx
-
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { 
@@ -10,8 +8,6 @@ import {
   fetchAllTeamsFromAllLeagues 
 } from '@/lib/api';
 import { createTeamSlug } from '@/lib/utils';
-
-// Component Imports
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SportsNav from '@/components/SportsNav';
@@ -22,43 +18,30 @@ import LeagueStandings from '@/components/team/LeagueStandings';
 import SquadList from '@/components/team/SquadList';
 import BacktoTeamLists from "@/components/BacktoTeamLists";
 
-// Define the type for the destructured params for clarity
 type PageProps = {
-  params: {
-    slug: string;
-  };
+  params: { slug: string; };
 };
 
-// Helper function to extract the ID from a slug
 const getTeamIdFromSlug = (slug: string): string | null => {
     const parts = slug.split('-');
     const potentialId = parts[parts.length - 1];
     return /^\d+$/.test(potentialId) ? potentialId : null;
 };
 
-// --- METADATA FUNCTION WITH KEYWORDS, AUTHOR, AND PUBLISHER ---
 export async function generateMetadata({ params: { slug } }: PageProps): Promise<Metadata> {
   const teamId = getTeamIdFromSlug(slug);
-
   if (!teamId) {
-    return { 
-      title: 'Invalid Team URL',
-      robots: { index: false } // Don't index invalid URLs
-    };
+    return { title: 'Invalid Team URL', robots: { index: false } };
   }
-
   const teamInfo = await fetchTeamInfo(teamId);
-  
   if (!teamInfo) {
-    return { 
-      title: 'Team Not Found',
-      robots: { index: false } // Don't index pages for teams that weren't found
-    };
+    return { title: 'Team Not Found', robots: { index: false } };
   }
 
   const team = teamInfo.team;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com';
-  const canonicalUrl = `${siteUrl}/team/${slug}`;
+  // --- THIS IS THE CRITICAL SEO UPDATE ---
+  const canonicalUrl = `${siteUrl}/teams-list/${slug}`;
   
   const dynamicTitle = `${team.name}: Live Scores, Fixtures & Standings`;
   const dynamicDescription = `Get the latest live scores, match schedule, league standings, and full squad list for ${team.name}. Follow all the action on TodayLiveScores.`;
@@ -66,48 +49,31 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
   return {
     title: dynamicTitle,
     description: dynamicDescription,
-    
-    // ADDED: Dynamic keywords for the team page.
     keywords: [
-        team.name, 
-        `${team.name} scores`, 
-        `${team.name} fixtures`, 
-        `${team.name} squad`,
-        'football team',
-        'team standings'
+        team.name, `${team.name} scores`, `${team.name} fixtures`, 
+        `${team.name} squad`, 'football team', 'team standings'
     ],
-    
-    // ADDED: Author and Publisher for brand consistency.
     authors: [{ name: 'TodayLiveScores' }],
     publisher: 'TodayLiveScores',
-
-    // ADDED: The canonical URL for this specific team page.
     alternates: {
-      canonical: canonicalUrl,
+      canonical: canonicalUrl, // Use the updated URL here
     },
-
-    // ADDED: Explicit instructions for search engine crawlers.
     robots: {
       index: true,
       follow: true,
     },
-
-    // ADDED: Open Graph and Twitter tags for rich social sharing.
     openGraph: {
       title: dynamicTitle,
       description: dynamicDescription,
-      url: canonicalUrl,
+      url: canonicalUrl, // And also here
       siteName: 'TodayLiveScores',
-      images: [
-        {
-          url: team.logo, 
-          width: 250,
-          height: 250,
-          alt: `${team.name} logo`,
-        },
-      ],
+      images: [{
+        url: team.logo, 
+        width: 250,
+        height: 250,
+        alt: `${team.name} logo`,
+      }],
       type: 'profile',
-      // ADDED: Author for social sharing consistency
       authors: ['TodayLiveScores'],
     },
     twitter: {
@@ -119,9 +85,9 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
   };
 }
 
-// --- Page Component (no changes needed here) ---
 export default async function TeamDetailPage({ params: { slug } }: PageProps) {
-  const teamId = getTeamIdFromSlug(slug);
+    // ... No changes needed to the page component itself
+    const teamId = getTeamIdFromSlug(slug);
 
   if (!teamId) {
     notFound(); 
@@ -174,9 +140,9 @@ export default async function TeamDetailPage({ params: { slug } }: PageProps) {
   );
 }
 
-// --- generateStaticParams is correct and needs no changes ---
 export async function generateStaticParams() {
-  const allLeagues = await fetchAllTeamsFromAllLeagues();
+    // ... No changes needed here either
+    const allLeagues = await fetchAllTeamsFromAllLeagues();
   if (!allLeagues || allLeagues.length === 0) return []; // Graceful fallback
   
   const allTeams = allLeagues.flatMap(league => league.teams);
