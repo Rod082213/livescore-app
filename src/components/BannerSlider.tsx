@@ -49,13 +49,15 @@ const BannerSlider = ({ location, className }: { location: string, className?: s
         {banners.map(banner => (
           <div className="embla__slide relative h-full" key={banner._id.toString()}>
             <Link href={banner.targetUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-              <Image 
-                src={banner.imageUrl} 
-                alt="Promotional Banner" 
-                fill 
-                className="object-cover object-center"
-                sizes="(max-width: 768px) 100vw, 50vw" 
-              />
+             <div className="relative w-full h-100 rounded-xl overflow-hidden">
+                <Image 
+                  src={banner.imageUrl} 
+                  alt="Promotional Banner" 
+                  fill 
+                  className="object-cover object-center"
+                  sizes="(max-width: 768px) 100vw, 50vw" 
+                />
+              </div>
             </Link>
           </div>
         ))}
