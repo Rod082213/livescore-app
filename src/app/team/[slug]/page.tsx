@@ -36,7 +36,7 @@ const getTeamIdFromSlug = (slug: string): string | null => {
     return /^\d+$/.test(potentialId) ? potentialId : null;
 };
 
-// --- METADATA FUNCTION WITH CANONICAL AND ROBOTS TAGS ---
+// --- METADATA FUNCTION WITH KEYWORDS, AUTHOR, AND PUBLISHER ---
 export async function generateMetadata({ params: { slug } }: PageProps): Promise<Metadata> {
   const teamId = getTeamIdFromSlug(slug);
 
@@ -67,6 +67,20 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
     title: dynamicTitle,
     description: dynamicDescription,
     
+    // ADDED: Dynamic keywords for the team page.
+    keywords: [
+        team.name, 
+        `${team.name} scores`, 
+        `${team.name} fixtures`, 
+        `${team.name} squad`,
+        'football team',
+        'team standings'
+    ],
+    
+    // ADDED: Author and Publisher for brand consistency.
+    authors: [{ name: 'TodayLiveScores' }],
+    publisher: 'TodayLiveScores',
+
     // ADDED: The canonical URL for this specific team page.
     alternates: {
       canonical: canonicalUrl,
@@ -84,23 +98,23 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
       description: dynamicDescription,
       url: canonicalUrl,
       siteName: 'TodayLiveScores',
-      // For a dynamic image, you can use the team's logo.
-      // Make sure the logo URL is absolute (https://...).
       images: [
         {
-          url: team.logo, // Using the team's logo for the social card
-          width: 250,     // Specify dimensions if known
+          url: team.logo, 
+          width: 250,
           height: 250,
           alt: `${team.name} logo`,
         },
       ],
-      type: 'profile', // 'profile' is a good type for an entity like a sports team
+      type: 'profile',
+      // ADDED: Author for social sharing consistency
+      authors: ['TodayLiveScores'],
     },
     twitter: {
       card: 'summary',
       title: dynamicTitle,
       description: dynamicDescription,
-      images: [team.logo], // Use the team's logo here as well
+      images: [team.logo], 
     },
   };
 }
@@ -113,7 +127,6 @@ export default async function TeamDetailPage({ params: { slug } }: PageProps) {
     notFound(); 
   }
 
-  // Fetching is automatically deduplicated by Next.js
   const [teamInfo, fixtures, squad] = await Promise.all([
     fetchTeamInfo(teamId),
     fetchTeamFixtures(teamId),

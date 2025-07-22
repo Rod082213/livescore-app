@@ -14,7 +14,7 @@ import { getMatchesByDate, searchEverything } from '@/app/actions';
 import { LeagueGroup, Match, Team } from '@/data/mockData';
 import { NewsArticleSummary } from '@/lib/types';
 import { XCircle, Search } from 'lucide-react';
-import BannerSlider from '@/components/BannerSlider';
+// import BannerSlider from '@/components/BannerSlider';
 import '@/css/banner-slider.css';
    
 const isToday = (someDate: Date) => {
@@ -253,9 +253,9 @@ export default function DashboardWrapper({
                 </div>
             )}
             
-        <div className="mb-8">
+        {/* <div className="mb-8">
           <BannerSlider location="homepage" className="h-64" />
-        </div>
+        </div> */}
 
             <MatchListContainer 
               matches={filteredMatches}

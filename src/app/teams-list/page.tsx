@@ -23,10 +23,21 @@ export const revalidate = 86400; // 24 hours in seconds
 export const metadata: Metadata = {
   title: 'Browse All Football Teams by League',
   description: 'Explore a complete directory of football teams, logos, and standings from top leagues worldwide. Find your favorite team on TodayLiveScores.',
+  keywords: [
+    'football teams',  
+    'football clubs', 
+    'team standings', 
+],
   
+  // CORRECTED: This generates the primary <meta name="author" content="Author"> tag.
+  authors: [{ name: 'TodayLiveScores' }],
+  
+  // CONFIRMED: The publisher of the website.
+  publisher: 'TodayLiveScores',
+
   // ADDED: The canonical URL for the teams list page.
   alternates: {
-    canonical: 'https://todaylivescores.com/teams-list', // <-- Use your actual domain here
+    canonical: 'https://todaylivescores.com/teams-list',
   },
 
   // ADDED: Explicit instructions for search engine crawlers.
@@ -35,20 +46,23 @@ export const metadata: Metadata = {
     follow: true,
   },
 
-  // ADDED: Open Graph and Twitter tags for rich social sharing.
+  // CORRECTED: Open Graph and Twitter tags for rich social sharing.
   openGraph: {
     title: 'Browse All Football Teams by League | TodayLiveScores',
     description: 'Explore a complete directory of football teams from top leagues worldwide.',
-    url: 'https://todaylivescores.com/teams-list', // <-- Use your actual domain here
+    url: 'https://todaylivescores.com/teams-list',
     siteName: 'TodayLiveScores',
     images: [
       {
-        url: '/social-card-teams.png', // IMPORTANT: Create this 1200x630px image
+        url: '/social-card-teams.png',
         width: 1200,
         height: 630,
         alt: 'A directory of all football teams on TodayLiveScores',
       },
     ],
+    publishedTime: new Date().toISOString(),
+    // CORRECTED: This ensures the author for social media sharing is also 'Author'.
+    authors: ['Author'], 
     type: 'website',
   },
   twitter: {

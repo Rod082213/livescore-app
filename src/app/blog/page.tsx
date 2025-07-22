@@ -16,8 +16,6 @@ import Tag from '@/models/Tag';
 // --- SEO & PERFORMANCE ENHANCEMENTS ---
 
 // 1. Time-based Revalidation: Re-fetch data and rebuild the page every hour.
-// This is MUCH better for performance than noStore() for a blog index.
-// The page will be served statically from the cache (fast!) and updated in the background.
 export const revalidate = 3600; // Revalidate every hour (in seconds)
 
 // 2. SEO-Optimized Metadata for the Blog Index Page
@@ -26,6 +24,21 @@ export const metadata: Metadata = {
   title: 'Latest Sports News & Analysis | TodayLiveScores Blog',
   description: 'Explore in-depth articles, match previews, and expert analysis on football, basketball, and more. Stay updated with the latest news from the world of sports.',
   
+  // ADDED: Keywords for the main blog page
+  keywords: [
+    'sports blog', 
+    'football analysis', 
+ 
+    'expert sports analysis', 
+    
+  ],
+
+  // ADDED: Author for brand consistency
+  authors: [{ name: 'TodayLiveScores' }],
+
+  // ADDED: Publisher for brand consistency
+  publisher: 'TodayLiveScores',
+
   // The canonical URL for the main blog page
   alternates: {
     canonical: 'https://www.todaylivescores.com/blog', 
@@ -41,7 +54,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Latest Sports News & Analysis | TodayLiveScores Blog',
     description: 'In-depth articles, match previews, and expert analysis.',
-    url: '/blog',
+    url: 'https://www.todaylivescores.com/blog', // Using absolute URL for consistency
     siteName: 'TodayLiveScores',
     images: [
       {
@@ -52,6 +65,10 @@ export const metadata: Metadata = {
       },
     ],
     type: 'website',
+    // ADDED: Author for social media sharing
+    authors: ['TodayLiveScores'],
+    // ADDED: Published time for freshness signal
+    publishedTime: new Date().toISOString(),
   },
 
   // Twitter-specific tags
@@ -66,9 +83,6 @@ export const metadata: Metadata = {
 
 // --- DATA FETCHING ---
 async function getBlogPageData() {
-    // We removed noStore() to enable caching with `revalidate`
-    // noStore(); 
-    
     await dbConnect();
 
     // Fetching data concurrently remains the best practice

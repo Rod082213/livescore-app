@@ -38,6 +38,11 @@ export const metadata: Metadata = {
 
   // Keywords for context and for search engines that still use them.
   keywords: ['sports news', 'latest news', 'football news', 'transfer news', 'basketball', 'tennis', 'sports headlines', 'live scores news', 'sports updates'],
+    // ADDED: Author for brand consistency
+  authors: [{ name: 'TodayLiveScores' }],
+
+  // ADDED: Publisher for brand consistency
+  publisher: 'TodayLiveScores',
 
   // Canonical URL to define the authoritative page for search engines.
   alternates: {
@@ -61,6 +66,7 @@ export const metadata: Metadata = {
     ],
     locale: 'en_US',
     type: 'website',
+     authors: ['TodayLiveScores'],
   },
 
   // Twitter-specific tags for a great appearance when shared on Twitter.

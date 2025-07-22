@@ -21,6 +21,19 @@ export const metadata: Metadata = {
   title: 'Daily Football Highlights & Match Previews',
   description: 'Catch up on all the action with daily football highlights. See live scores, finished match videos, and schedules for upcoming games all in one place.',
   
+  // ADDED: Keywords for the highlights page
+  keywords: [
+    'football highlights',
+    'daily highlights',
+    'Premier League highlights',
+  ],
+
+  // ADDED: Author to match the teams-list page
+  authors: [{ name: 'TodayLiveScores' }],
+
+  // ADDED: Publisher to match the teams-list page
+  publisher: 'TodayLiveScores',
+
   // ADDED: The canonical URL for the highlights page.
   // This must be an absolute URL.
   alternates: {
@@ -47,6 +60,8 @@ export const metadata: Metadata = {
         alt: 'Daily Football Highlights on TodayLiveScores',
       },
     ],
+    // ADDED: Author for social media sharing consistency
+    authors: ['TodayLiveScores'],
     type: 'website',
   },
   twitter: {

@@ -19,7 +19,7 @@ import { fetchMatchDetailsById, getMatchHighlights, fetchMatchLineups } from '@/
 import { Highlight } from '@/lib/types';
 import { format } from 'date-fns';
 
-// --- DYNAMIC METADATA GENERATION (WITH FIX) ---
+// --- DYNAMIC METADATA GENERATION (WITH ADDITIONS) ---
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const { slug } = params;
@@ -30,14 +30,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     return { title: 'Match Not Found' };
   }
 
-  // Fetch the data needed for metadata
   const match = await fetchMatchDetailsById(matchId);
 
-  // If match not found, return default metadata for the 404 page
   if (!match) {
     return {
       title: 'Match Not Found',
-      robots: { index: false, follow: false }, // Don't index this error page
+      robots: { index: false, follow: false },
     };
   }
 
@@ -47,23 +45,23 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   
   let metaTitle = `${homeTeam.name} vs ${awayTeam.name} - Match Preview`;
   let metaDescription = `Get ready for the ${league.name} match between ${homeTeam.name} and ${awayTeam.name}. Check H2H stats, form, and predictions.`;
+  // ADDED: Dynamic keywords based on match status with a limit of 3
+  let dynamicKeyword = 'match preview';
 
-  // Dynamically change title and description based on match status
   switch (status) {
     case 'LIVE':
     case 'HT':
       metaTitle = `LIVE: ${homeTeam.name} vs ${awayTeam.name} (${score.home}-${score.away}) | ${league.name} Score`;
       metaDescription = `Follow live score updates, stats, and key events for the ${homeTeam.name} vs ${awayTeam.name} match. Current score: ${score.home}-${score.away}.`;
+      dynamicKeyword = 'live score';
       break;
     case 'FT':
       metaTitle = `Result: ${homeTeam.name} ${score.home} - ${score.away} ${awayTeam.name} | Highlights & Stats`;
       metaDescription = `See the final result, full stats, and watch video highlights for the ${league.name} match between ${homeTeam.name} and ${awayTeam.name}. Final score: ${score.home}-${score.away}.`;
+      dynamicKeyword = 'match highlights';
       break;
   }
   
-  // --- THIS IS THE FIX ---
-  // Create a safe date by checking if the timestamp is a valid number.
-  // If it's not valid (e.g., undefined, null, NaN), fall back to the current date.
   const publishedDate = match.timestamp && !isNaN(match.timestamp)
     ? new Date(match.timestamp * 1000)
     : new Date();
@@ -71,6 +69,15 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: metaTitle,
     description: metaDescription,
+    
+    // ADDED: Keywords array with a limit of 3
+    keywords: [`${homeTeam.name} vs ${awayTeam.name}`, dynamicKeyword, league.name],
+
+    // ADDED: Author for brand consistency
+    authors: [{ name: 'TodayLiveScores' }],
+
+    // ADDED: Publisher for brand consistency
+    publisher: 'TodayLiveScores',
     
     // Canonical and Robots tags
     alternates: {
@@ -89,15 +96,16 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       siteName: 'TodayLiveScores',
       images: [
         {
-          url: '/social-card-match.png', // Create a generic match social card (1200x630px)
+          url: '/social-card-match.png', 
           width: 1200,
           height: 630,
           alt: `Match details for ${homeTeam.name} vs ${awayTeam.name}`,
         },
       ],
       type: 'article',
-      // Use the safe publishedDate variable here to prevent the RangeError
       publishedTime: publishedDate.toISOString(),
+      // ADDED: Author for social sharing consistency
+      authors: ['TodayLiveScores'],
     },
     twitter: {
       card: 'summary_large_image',
@@ -121,8 +129,6 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
     notFound();
   }
 
-  // Next.js automatically deduplicates this fetch call with the one in generateMetadata.
-  // It will only make one network request.
   const [matchDetails, lineups] = await Promise.all([
     fetchMatchDetailsById(matchId),
     fetchMatchLineups(matchId),
@@ -147,12 +153,13 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
         <BackButton />
         <MatchHeader match={matchDetails} />
         
-        {isFinished && highlights.length > 0 && (
-          <MatchHighlightsVideo highlights={highlights} />
-        )}
+      
         
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+              {isFinished && highlights.length > 0 && (
+          <MatchHighlightsVideo highlights={highlights} />
+        )}
             <MatchTimeline events={matchDetails.events} />
             <MatchLineups lineups={lineups} />
             <MatchStatistics statistics={matchDetails.statistics} />
