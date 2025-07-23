@@ -9,9 +9,10 @@ import Header from '@/components/Header';
 import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
-import BlogPagination from '@/components/BlogPagination';
+import BlogPagination from '@/components/BlogPagination'; // This now points to our Client Component
 import { IPost, ICategory, ITag } from '@/models/Post';
 
+// Revalidate the page every hour to fetch new posts
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -48,24 +49,29 @@ async function getBlogPageData({ page = 1, limit = 6 }: { page: number; limit: n
   ]);
 
   return {
-    posts: JSON.parse(JSON.stringify(posts)),
-    categories: JSON.parse(JSON.stringify(categories)),
-    tags: JSON.parse(JSON.stringify(tags)),
+    posts: JSON.parse(JSON.stringify(posts)) as IPost[],
+    categories: JSON.parse(JSON.stringify(categories)) as ICategory[],
+    tags: JSON.parse(JSON.stringify(tags)) as ITag[],
     totalPages: Math.ceil(totalPosts / limit),
     currentPage: page,
   };
 }
 
-// --- Components ---
+// --- Sub-Components ---
 const PostCard = ({ post }: { post: IPost }) => {
-  const summary = (() => {
-    if (Array.isArray(post.content)) {
-      const pBlock = post.content.find(b => b.type === 'p');
-      return pBlock?.value?.html?.replace(/<[^>]+>/g, '')?.slice(0, 100) + '...' || 'Read more';
+  // Safely generate a summary from the post content
+  const generateSummary = (content: any): string => {
+    let text = 'Read more';
+    if (Array.isArray(content)) {
+      const pBlock = content.find(b => b.type === 'p' && b.value?.html);
+      text = pBlock?.value.html;
+    } else if (content?.value?.html) {
+      text = content.value.html;
     }
-    return post.content?.value?.html?.replace(/<[^>]+>/g, '')?.slice(0, 100) + '...' || 'Read more';
-  })();
+    return text?.replace(/<[^>]+>/g, '')?.slice(0, 100) + '...' || 'Read more';
+  };
 
+  const summary = generateSummary(post.content);
   const firstCategory = post.categories?.[0] as ICategory | undefined;
 
   return (
@@ -80,8 +86,8 @@ const PostCard = ({ post }: { post: IPost }) => {
           src={post.featuredImageUrl || '/placeholder-image.jpg'}
           alt={post.title}
           fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       </div>
       <div className="p-5 flex flex-col">
@@ -140,7 +146,6 @@ export default async function BlogListPage({ searchParams }: { searchParams?: { 
     <div className="bg-[#1d222d] text-white min-h-screen">
       <Header />
       <SportsNav />
-
       <div className="container mx-auto px-4 py-12">
         <div className="mb-8 md:relative">
           <div className="md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2">
@@ -148,7 +153,6 @@ export default async function BlogListPage({ searchParams }: { searchParams?: { 
           </div>
           <h1 className="text-center text-4xl md:text-5xl font-extrabold pb-4 border-b border-gray-700 mt-4 md:mt-0">Our Blog</h1>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-8">
           <main className="lg:col-span-9">
             {posts.length > 0 ? (
