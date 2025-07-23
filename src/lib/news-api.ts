@@ -23,7 +23,7 @@ function mapApiArticle(apiArticle: any): NewsArticleSummary {
         slug: apiArticle.slug,
         image_url: apiArticle.image_url, // Maps 'image_url' to 'imageUrl'
         summary: apiArticle.description || generateSummaryFromHtml(apiArticle.full_article),
-        publishedAt: apiArticle.pubDate,
+        publishedAt: apiArticle.created_at,
     };
 }
 
