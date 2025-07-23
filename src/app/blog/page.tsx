@@ -11,13 +11,14 @@ import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
 import BlogPagination from '@/components/BlogPagination';
 import { IPost, ICategory, ITag } from '@/models/Post';
+import FormattedDate from '@/components/FormattedDate'; // The component that fixes the error
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Latest Sports News & Analysis | TLiveScores Blog',
   description: 'Explore in-depth articles, match previews, and expert analysis on football, basketball, boxing, and more.',
-  alternates: { canonical: 'https://www.todaylivescores.com/blog' },
+  alternates: { canonical: 'https://todaylivescores.com/blog' },
 };
 
 async function getBlogPageData({ page = 1, limit = 6 }: { page: number; limit: number }) {
@@ -41,25 +42,12 @@ async function getBlogPageData({ page = 1, limit = 6 }: { page: number; limit: n
 }
 
 const PostCard = ({ post }: { post: IPost }) => {
-  const summary = 'Read more...';
+  const summary = post.content?.blocks?.find(b => b.type === 'paragraph')?.data.text.replace(/<[^>]*>/g, '').slice(0, 90) + '...' || 'Read more...';
   const firstCategory = post.categories?.[0] as ICategory | undefined;
-
-  const publicDomain = 'https://todaylivescores.com';
-  let imageUrl = `${publicDomain}/placeholder-image.jpg`;
-
-  if (post.featuredImageUrl) {
-    try {
-      const imagePath = post.featuredImageUrl.startsWith('/')
-        ? post.featuredImageUrl
-        : new URL(post.featuredImageUrl).pathname;
-      imageUrl = `${publicDomain}${imagePath}`;
-    } catch (e) {
-      console.error("Invalid image URL in PostCard:", post.featuredImageUrl);
-    }
-  }
+  const imageUrl = `https://todaylivescores.com${post.featuredImageUrl || '/placeholder-image.jpg'}`;
 
   return (
-    <div className="bg-[#283040] rounded-lg overflow-hidden shadow-lg flex flex-col">
+    <div className="bg-[#283040] rounded-lg overflow-hidden shadow-lg flex flex-col hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
       <Link href={`/blog/${post.slug}`} className="block group">
         <div className="relative w-full h-48">
           {firstCategory && (
@@ -86,7 +74,8 @@ const PostCard = ({ post }: { post: IPost }) => {
         <div className="text-xs text-gray-500 border-t border-gray-700 pt-3 mt-auto">
           <span>By {post.author || 'Staff'}</span>
           <span className="mx-2">•</span>
-          <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+          {/* FIX: Using the safe component to render the date */}
+          <FormattedDate dateString={post.createdAt} />
         </div>
       </div>
     </div>
@@ -100,7 +89,7 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[]; tags: ITag[] }
       <ul className="space-y-2">
         {categories.map(cat => (
           <li key={cat._id.toString()}>
-            <Link href={`/blog/category/${encodeURIComponent(cat.name.toLowerCase())}`} className="text-gray-300 hover:text-blue-400 block capitalize">
+            <Link href={`/blog/category/${cat.name.toLowerCase().replace(/\s+/g, '-')}`} className="text-gray-300 hover:text-blue-400 block capitalize">
               {cat.name}
             </Link>
           </li>
@@ -111,7 +100,7 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[]; tags: ITag[] }
       <h3 className="text-lg font-bold text-white mb-4">Tags</h3>
       <div className="flex flex-wrap gap-2">
         {tags.map(tag => (
-          <Link key={tag._id.toString()} href={`/blog/tag/${encodeURIComponent(tag.name.toLowerCase())}`} className="bg-gray-700 text-gray-300 text-xs font-medium px-3 py-1.5 rounded-full hover:bg-gray-600">
+          <Link key={tag._id.toString()} href={`/blog/tag/${tag.name.toLowerCase().replace(/\s+/g, '-')}`} className="bg-gray-700 text-gray-300 text-xs font-medium px-3 py-1.5 rounded-full hover:bg-gray-600">
             #{tag.name}
           </Link>
         ))}
