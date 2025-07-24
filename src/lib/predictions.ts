@@ -1,19 +1,22 @@
 // src/lib/predictions.ts
 
-// This function creates a consistent "strength" value based on a team's name
-const calculateTeamStrength = (name: string): number => {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    const char = name.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return 70 + (Math.abs(hash) % 31);
-};
+import 'server-only';
+import dbConnect from './mongodb';
+import Prediction, { IPrediction } from '@/models/Prediction';
+import { Match, Odds } from '@/data/mockData';
 
-// --- THIS FUNCTION IS NOW EXPORTED AGAIN ---
-// It returns raw numbers, which is what MatchRow needs for its calculations.
-export const predictOdds = (homeTeamName: string, awayTeamName: string) => {
+// This private helper function is where we apply the fix.
+const generateRawPredictionData = (homeTeamName: string, awayTeamName:string) => {
+  const calculateTeamStrength = (name: string): number => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      const char = name.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash |= 0;
+    }
+    return 70 + (Math.abs(hash) % 31);
+  };
+
   const homeStrength = calculateTeamStrength(homeTeamName);
   const awayStrength = calculateTeamStrength(awayTeamName);
   
@@ -27,15 +30,15 @@ export const predictOdds = (homeTeamName: string, awayTeamName: string) => {
 
   const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
 
-  return {
-    home: clamp(1 / homeWinProbability, 1.10, 9.00),
-    draw: clamp(1 / drawProbability, 3.00, 5.50),
-    away: clamp(1 / awayWinProbability, 1.10, 9.00),
+  // --- THIS IS THE FIX ---
+  // We calculate the raw odd, then use .toFixed(2) to round it to a string,
+  // and finally convert it back to a Number.
+  const odds: Odds = {
+    home: Number(clamp(1 / homeWinProbability, 1.10, 9.00).toFixed(2)),
+    draw: Number(clamp(1 / drawProbability, 3.00, 5.50).toFixed(2)),
+    away: Number(clamp(1 / awayWinProbability, 1.10, 9.00).toFixed(2)),
   };
-};
 
-// This function converts odds to percentages (internal helper)
-const convertOddsToPercentages = (odds: { home: number; draw: number; away: number; }) => {
   const probHome = 1 / odds.home;
   const probDraw = 1 / odds.draw;
   const probAway = 1 / odds.away;
@@ -53,20 +56,44 @@ const convertOddsToPercentages = (odds: { home: number; draw: number; away: numb
     else awayPercent += diff;
   }
   
-  return { home: homePercent, draw: drawPercent, away: awayPercent };
+  const percentages = { home: homePercent, draw: drawPercent, away: awayPercent };
+  
+  const confidence = Math.max(percentages.home, percentages.draw, percentages.away);
+  let predictedOutcome: 'home' | 'draw' | 'away' = 'draw';
+  if (confidence === percentages.home) predictedOutcome = 'home';
+  else if (confidence === percentages.away) predictedOutcome = 'away';
+
+  return { odds, percentages, confidence, predictedOutcome };
 };
 
-// This function is used by the main PredictionForm/MatchPrediction component.
-export function generatePredictionData(homeTeamName: string, awayTeamName: string) {
-  const odds = predictOdds(homeTeamName, awayTeamName);
-  const percentages = convertOddsToPercentages(odds);
+export const getMatchPrediction = async (match: Partial<Match>): Promise<IPrediction | null> => {
+  if (!match?.id || !match.homeTeam?.name || !match.awayTeam?.name) {
+    console.error(`[Prediction Error] getMatchPrediction called with invalid match object for match ID: ${match?.id}.`);
+    return null;
+  }
+  
+  try {
+    await dbConnect();
+    const existingPrediction = await Prediction.findOne({ matchId: match.id }).lean();
+    
+    if (existingPrediction) {
+      return existingPrediction;
+    }
 
-  return {
-    odds: {
-      home: odds.home.toFixed(2),
-      draw: odds.draw.toFixed(2),
-      away: odds.away.toFixed(2),
-    },
-    percentages
-  };
-}
+    const newPredictionData = generateRawPredictionData(match.homeTeam.name, match.awayTeam.name);
+
+    const predictionToSave = new Prediction({
+      matchId: match.id,
+      homeTeamName: match.homeTeam.name,
+      awayTeamName: match.awayTeam.name,
+      ...newPredictionData,
+    });
+
+    await predictionToSave.save();
+    return predictionToSave.toObject();
+
+  } catch (error) {
+    console.error(`[Prediction DB/Logic Error] Failed for Match ID ${match.id}:`, error);
+    return null;
+  }
+};

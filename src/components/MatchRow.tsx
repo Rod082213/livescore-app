@@ -2,45 +2,24 @@
 
 "use client";
 
-import { useState } from "react";
-import { Match, Odds } from "@/data/mockData"; // Assuming Odds type is exported
+import { Match } from "@/data/mockData";
+import { IPrediction } from "@/models/Prediction";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, TrendingUp, Loader2 } from "lucide-react"; // Import Loader2
+import { Star, ChevronRight } from "lucide-react";
 import { generateSlug } from "@/lib/utils";
-import { predictOdds } from "@/lib/predictions";
 
-const MatchRow = ({ match }: { match: Match }) => {
+interface MatchRowProps {
+  match: Match & { prediction: IPredicion | null };
+}
+
+const MatchRow = ({ match }: MatchRowProps) => {
   const slug = generateSlug(match.homeTeam.name, match.awayTeam.name, match.id);
 
-  // --- 1. ADD NEW STATE FOR LOADING AND STORING ODDS ---
-  const [areOddsVisible, setAreOddsVisible] = useState(false);
-  const [isLoadingOdds, setIsLoadingOdds] = useState(false);
-  const [displayOdds, setDisplayOdds] = useState<Odds | null>(null);
-
-  // Handle different time/status displays
   const renderTimeOrStatus = () => {
     if (match.status === 'LIVE') return <p className="text-green-500 font-bold">{match.time}</p>;
     if (match.status === 'FT') return <p className="text-gray-400">FT</p>;
     return <p>{match.time?.split(' ')[0]}</p>;
-  };
-
-  // --- 2. UPDATE THE CLICK HANDLER ---
-  const handleShowOdds = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    setIsLoadingOdds(true);
-
-    // Simulate a small network delay so the preloader is visible
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Calculate and store the odds
-    const calculatedOdds = match.odds || predictOdds(match.homeTeam.name, match.awayTeam.name);
-    setDisplayOdds(calculatedOdds);
-
-    setIsLoadingOdds(false);
-    setAreOddsVisible(true);
   };
 
   return (
@@ -63,48 +42,15 @@ const MatchRow = ({ match }: { match: Match }) => {
         </div>
       </div>
 
-      {/* --- 3. UPDATED CONDITIONAL RENDERING FOR ODDS/BUTTON --- */}
-      <div className="hidden md:flex justify-around items-center w-48 text-center font-semibold flex-shrink-0">
-        {areOddsVisible && displayOdds ? (
-          // --- RENDER ODDS ---
-          <>
-            {((): JSX.Element => {
-              const areOddsPredicted = !match.odds;
-              const minOdd = Math.min(displayOdds.home, displayOdds.draw, displayOdds.away);
-              const getOddClass = (odd: number) => `px-2 py-1 rounded-md transition-colors ${ odd === minOdd ? 'bg-blue-900/50 text-white' : 'text-gray-300' }`;
-
-              return (
-                <>
-                  <span title={areOddsPredicted ? "Predicted Odd" : "Home Win Odd"} className={getOddClass(displayOdds.home)}>
-                    {displayOdds.home.toFixed(2)}
-                  </span>
-                  <span title={areOddsPredicted ? "Predicted Odd" : "Draw Odd"} className={getOddClass(displayOdds.draw)}>
-                    {displayOdds.draw.toFixed(2)}
-                  </span>
-                  <span title={areOddsPredicted ? "Predicted Odd" : "Away Win Odd"} className={getOddClass(displayOdds.away)}>
-                    {displayOdds.away.toFixed(2)}
-                  </span>
-                </>
-              );
-            })()}
-          </>
-        ) : (
-          // --- RENDER BUTTON (WITH PRELOADER LOGIC) ---
-          <button
-            onClick={handleShowOdds}
-            disabled={isLoadingOdds} // Disable button while loading
-            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-md border border-blue-500/50 text-blue-400 font-semibold text-xs hover:bg-blue-500/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
-          >
-            {isLoadingOdds ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <>
-                <TrendingUp size={16} />
-                Show Odds
-              </>
-            )}
-          </button>
-        )}
+      {/* --- THIS IS THE UPDATED BUTTON STYLING --- */}
+      <div className="hidden md:flex justify-end items-center w-48 text-center font-semibold flex-shrink-0">
+        <div
+          // The CSS classes here have been changed to make the button blue and bold.
+          className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-md border border-blue-500/50 text-blue-400 font-bold text-xs hover:bg-blue-500/10 transition-colors"
+        >
+          <span>See Details</span>
+          <ChevronRight size={16} />
+        </div>
       </div>
 
       {/* Score/Placeholder Column */}

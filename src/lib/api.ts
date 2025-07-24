@@ -7,6 +7,7 @@ import HighlightModel, { IHighlight } from '@/models/Highlight';
 import { Match, LeagueGroup, Standing, Player, ApiFixture, ApiOdd, ApiStanding, ApiPlayer, ApiLeague, MatchDetails } from "@/data/mockData";
 import { format } from 'date-fns';
 import { Highlight, Lineup, MatchLineupData } from './types';
+import { groupMatchesByLeague, mapApiFixtureToMatch } from './apiUtils';
 
 // ==================================================================
 // === FOOTBALL API CONFIGURATION (No Changes)                    ===
@@ -26,6 +27,22 @@ type Team = {
   logo: string;
 };
 
+export const fetchMatchesByDate = cache(async (date: string): Promise<LeagueGroup[]> => {
+    if (!FOOTBALL_API_KEY) return [];
+    try {
+        const response = await fetch(`${FOOTBALL_API_URL}/fixtures?date=${date}`, footballServerOptions);
+        if (!response.ok) return [];
+        const data = await response.json();
+        const allFixtures: ApiFixture[] = data.response || [];
+        const matches = allFixtures.map(mapApiFixtureToMatch).filter(Boolean) as Match[];
+        // Sort matches by time
+        matches.sort((a, b) => a.time.localeCompare(b.time));
+        return groupMatchesByLeague(matches);
+    } catch (error) {
+        console.error("Error fetching matches by date:", error);
+        return [];
+    }
+});
 // --- MAPPING FUNCTIONS (No Changes) ---
 function mapStatus(status: any): { status: Match['status'], time?: string } {
     if (['FT', 'AET', 'PEN'].includes(status.short)) return { status: 'FT', time: 'FT' };

@@ -17,10 +17,12 @@ import MatchLineups from '@/components/match/MatchLineups';
 import MatchHighlightsVideo from '@/components/match/MatchHighlightsVideo';
 import { fetchMatchDetailsById, getMatchHighlights, fetchMatchLineups } from '@/lib/api';
 import { Highlight } from '@/lib/types';
-import { format } from 'date-fns';
 
-// --- DYNAMIC METADATA GENERATION (WITH ADDITIONS) ---
+// --- ADD THESE NEW IMPORTS FOR THE FIX ---
+import { getMatchPrediction } from '@/lib/predictions'; // Import the prediction fetching function
+import { IPrediction } from '@/models/Prediction';      // Import the type for the prediction data
 
+// --- DYNAMIC METADATA GENERATION (No changes needed here) ---
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const { slug } = params;
   const slugParts = slug.split('-');
@@ -45,7 +47,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   
   let metaTitle = `${homeTeam.name} vs ${awayTeam.name} - Match Preview`;
   let metaDescription = `Get ready for the ${league.name} match between ${homeTeam.name} and ${awayTeam.name}. Check H2H stats, form, and predictions.`;
-  // ADDED: Dynamic keywords based on match status with a limit of 3
   let dynamicKeyword = 'match preview';
 
   switch (status) {
@@ -69,17 +70,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: metaTitle,
     description: metaDescription,
-    
-    // ADDED: Keywords array with a limit of 3
     keywords: [`${homeTeam.name} vs ${awayTeam.name}`, dynamicKeyword, league.name],
-
-    // ADDED: Author for brand consistency
     authors: [{ name: 'TodayLiveScores' }],
-
-    // ADDED: Publisher for brand consistency
     publisher: 'TodayLiveScores',
-    
-    // Canonical and Robots tags
     alternates: {
       canonical: canonicalUrl,
     },
@@ -87,8 +80,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       index: true,
       follow: true,
     },
-
-    // Open Graph and Twitter tags for social sharing
     openGraph: {
       title: metaTitle,
       description: metaDescription,
@@ -104,7 +95,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       ],
       type: 'article',
       publishedTime: publishedDate.toISOString(),
-      // ADDED: Author for social sharing consistency
       authors: ['TodayLiveScores'],
     },
     twitter: {
@@ -117,8 +107,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 
-// --- THE PAGE COMPONENT ---
-
+// --- THE PAGE COMPONENT (WITH CORRECTED DATA FLOW) ---
 export default async function MatchDetailPage({ params }: { params: { slug: string } }) {
   
   const { slug } = params;
@@ -129,21 +118,29 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
     notFound();
   }
 
-  const [matchDetails, lineups] = await Promise.all([
-    fetchMatchDetailsById(matchId),
-    fetchMatchLineups(matchId),
-  ]);
+  // --- STEP 1: FETCH THE ESSENTIAL MATCH DETAILS FIRST ---
+  const matchDetails = await fetchMatchDetailsById(matchId);
 
+  // If the match doesn't exist at all, stop and show a 404 page.
   if (!matchDetails) {
     notFound();
   }
 
-  const isFinished = matchDetails.status === 'FT';
-  let highlights: Highlight[] = [];
-
-  if (isFinished) {
-    highlights = await getMatchHighlights(matchDetails);
-  }
+  // --- STEP 2: FETCH ALL REMAINING DATA IN PARALLEL ---
+  // Now that we have the full 'matchDetails' object, we can safely call all other functions.
+  const [
+    lineups,
+    predictionData,
+    highlights
+  ] = await Promise.all([
+    fetchMatchLineups(matchId),
+    getMatchPrediction(matchDetails), // <-- This now receives the full object with team names.
+    matchDetails.status === 'FT' ? getMatchHighlights(matchDetails) : Promise.resolve([])
+  ]);
+  
+  // --- STEP 3: SANITIZE THE PREDICTION DATA FOR THE CLIENT ---
+  // This prevents the "cannot pass plain objects" error.
+  const plainPrediction: IPrediction | null = predictionData ? JSON.parse(JSON.stringify(predictionData)) : null;
 
   return (
     <div className="bg-[#1d222d] text-gray-200 min-h-screen">
@@ -153,13 +150,11 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
         <BackButton />
         <MatchHeader match={matchDetails} />
         
-      
-        
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-              {isFinished && highlights.length > 0 && (
-          <MatchHighlightsVideo highlights={highlights} />
-        )}
+              {matchDetails.status === 'FT' && highlights && highlights.length > 0 && (
+                <MatchHighlightsVideo highlights={highlights} />
+              )}
             <MatchTimeline events={matchDetails.events} />
             <MatchLineups lineups={lineups} />
             <MatchStatistics statistics={matchDetails.statistics} />
@@ -170,11 +165,12 @@ export default async function MatchDetailPage({ params }: { params: { slug: stri
           </div>
 
           <div className="lg:col-span-1 space-y-6 lg:sticky top-6 h-fit">
+            {/* --- STEP 4: PASS THE CORRECT PROP TO THE COMPONENT --- */}
             <MatchPrediction 
-              form={matchDetails.form}
               teams={{ home: matchDetails.homeTeam, away: matchDetails.awayTeam }} 
               status={matchDetails.status}
               score={matchDetails.score}
+              prediction={plainPrediction} // <-- It now receives the correctly fetched and sanitized data.
             />
             <MatchDescription />
             <WelcomeOffer />

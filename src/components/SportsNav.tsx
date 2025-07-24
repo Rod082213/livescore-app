@@ -4,7 +4,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Shield, Dribbble, Trophy, Newspaper, Users } from 'lucide-react';
+// --- ADD THE NEW ICONS TO THE IMPORT ---
+import { Shield, Trophy, Newspaper, Users, TrendingUp, FileText } from 'lucide-react';
 
 interface SportsNavProps {
   liveMatchCount: number;
@@ -13,21 +14,16 @@ interface SportsNavProps {
 const SportsNav = ({ liveMatchCount }: SportsNavProps) => {
   const pathname = usePathname();
 
+  // --- THE NAVITEMS ARRAY WITH UPDATED ICONS ---
   const navItems = [
     { name: 'Football', href: '/', icon: <Shield size={18} />, count: liveMatchCount },
-     { name: 'Teams', href: '/teams-list', icon: <Users size={18} /> },
-      { name: 'Sport Highlights', href: '/highlights', icon: <Trophy size={18} /> },
-    // { name: 'Basketball', href: '/basketball', icon: <Dribbble size={18} /> },
-    // { name: 'Tennis', href: '/tennis', icon: <Trophy size={18} /> },
+    { name: 'Teams', href: '/teams-list', icon: <Users size={18} /> },
+    { name: 'Sport Highlights', href: '/highlights', icon: <Trophy size={18} /> },
+    // Changed icon from Trophy to TrendingUp for better representation
+    { name: 'Predictions', href: '/predictions', icon: <TrendingUp size={18} /> },
     { name: 'News', href: '/news', icon: <Newspaper size={18} /> },
-   
-    { name: 'Blogs', href: '/blog', icon: <Newspaper size={18} /> },
-   
-   
-    // You can add more items here to test the scrolling
-    // { name: 'Ice Hockey', href: '/hockey', icon: <div className="w-4 h-4" /> },
-    // { name: 'Volleyball', href: '/volleyball', icon: <div className="w-4 h-4" /> },
-    // { name: 'Esports', href: '/esports', icon: <div className="w-4 h-4" /> },
+    // Changed icon from Newspaper to FileText to differentiate from News
+    { name: 'Blogs', href: '/blog', icon: <FileText size={18} /> },
   ];
 
   return (

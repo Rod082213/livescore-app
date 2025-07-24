@@ -11,12 +11,16 @@ import SportsNav from '@/components/SportsNav';
 import SearchResults from '@/components/SearchResults';
 import SearchModal from '@/components/SearchModal';
 import { getMatchesByDate, searchEverything } from '@/app/actions';
-import { LeagueGroup, Match, Team } from '@/data/mockData';
+import { LeagueGroup, Match, Team, Player } from '@/data/mockData';
 import { NewsArticleSummary } from '@/lib/types';
 import { XCircle, Search } from 'lucide-react';
 import BannerSlider from '@/components/BannerSlider';
 import '@/css/banner-slider.css';
-   
+import { IPrediction } from '@/models/Prediction';
+
+type EnrichedMatch = Match & { prediction: IPrediction | null };
+type EnrichedLeagueGroup = Omit<LeagueGroup, 'matches'> & { matches: EnrichedMatch[] };
+
 const isToday = (someDate: Date) => {
   const today = new Date();
   return someDate.getDate() === today.getDate() &&
@@ -33,11 +37,11 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
 };
 
 interface DashboardWrapperProps {
-  initialMatches: LeagueGroup[];
+  initialMatches: EnrichedLeagueGroup[];
   initialTopLeagues: LeagueGroup[];
-  initialTeamOfTheWeek: Team[];
-  initialLatestNews: NewsArticleSummary[]; 
-  initialFeaturedMatch: Match | null;
+  initialTeamOfTheWeek: Player[];
+  initialLatestNews: NewsArticleSummary[];
+  initialFeaturedMatch: EnrichedMatch | null;
 }
 
 export default function DashboardWrapper({
@@ -49,8 +53,8 @@ export default function DashboardWrapper({
 }: DashboardWrapperProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  const [matches, setMatches] = useState<LeagueGroup[]>(initialMatches);
-  const [featuredMatch, setFeaturedMatch] = useState<Match | null>(initialFeaturedMatch);
+  const [matches, setMatches] = useState<EnrichedLeagueGroup[]>(initialMatches);
+  const [featuredMatch, setFeaturedMatch] = useState<EnrichedMatch | null>(initialFeaturedMatch);
   
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{leagues: any[], teams: any[]}>({leagues: [], teams: []});
@@ -60,10 +64,8 @@ export default function DashboardWrapper({
   
   const [activeTab, setActiveTab] = useState<'all' | 'live' | 'finished' | 'upcoming'>('all');
   const [isPageVisible, setIsPageVisible] = useState(true);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
   
-  // --- FIX: Use a ref to track the very first render ---
-  // This prevents an unnecessary data fetch on mount, since we have server-provided `initialMatches`.
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
 
   useEffect(() => {
@@ -100,60 +102,21 @@ export default function DashboardWrapper({
     performSearch(query);
   }, [query, performSearch]);
 
-  // --- REWRITTEN DATA FETCHING LOGIC ---
   useEffect(() => {
-    const isViewingToday = isToday(selectedDate);
-    
-    // --- SCENARIO 1: User explicitly requests a non-today date. SHOW LOADER. ---
-    if (!isViewingToday) {
-      const loadHistoricData = async () => {
-        setIsLoading(true);
-        const newMatches = await getMatchesByDate(selectedDate);
-        setMatches(newMatches || []);
-        setIsLoading(false);
-      };
-      loadHistoricData();
-      return; // Stop here, no polling needed for past/future dates.
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
     }
 
-    // --- SCENARIO 2: Viewing today's date. All fetches should be SILENT. ---
-    let pollingInterval: NodeJS.Timeout | null = null;
-    
-    const loadTodaysDataSilently = async () => {
-      console.log("Fetching today's data in the background...");
-      try {
-        const response = await fetch('/api/dashboard');
-        if (!response.ok) return;
-        const updatedMatches = await response.json();
-        setMatches(updatedMatches);
-      } catch (error) {
-        console.error("Silent dashboard fetch failed:", error);
-      }
+    const loadDataForDate = async () => {
+      setIsLoading(true);
+      const newMatches = await getMatchesByDate(selectedDate);
+      setMatches(newMatches || []);
+      setIsLoading(false);
     };
 
-    if (isPageVisible) {
-      // On the very first render, we don't need to fetch because we have `initialMatches`.
-      // On subsequent times this effect runs (e.g., tabbing back), we DO want to fetch.
-      if (isInitialLoad.current) {
-        isInitialLoad.current = false; // Mark the initial load as complete.
-      } else {
-        // This runs when the user tabs back to the page.
-        loadTodaysDataSilently();
-      }
-      
-      // Setup the silent polling.
-      pollingInterval = setInterval(loadTodaysDataSilently, 15000);
-    }
-
-    // The cleanup function is essential. It clears the interval when the component
-    // re-renders (because date or visibility changed) or unmounts.
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-    };
-  }, [selectedDate, isPageVisible]); // This effect now ONLY depends on these two state changes.
-
+    loadDataForDate();
+  }, [selectedDate]);
 
   const liveMatchCount = useMemo(() => {
     return (matches || []).reduce((count, group) => {
@@ -194,10 +157,7 @@ export default function DashboardWrapper({
   };
   
   const searchBarComponent = (
-    <div 
-        ref={searchContainerRef}
-        className="w-full relative"
-    >
+    <div ref={searchContainerRef} className="w-full relative">
         <div className="w-full flex items-center bg-[#2b3341] rounded-full px-4">
           <Search className="text-gray-400 w-5 h-5" />
           <input 
@@ -226,10 +186,7 @@ export default function DashboardWrapper({
         {searchBarComponent}
       </Header>
 
-      <SearchModal 
-        isOpen={isSearchModalOpen} 
-        onClose={() => setIsSearchModalOpen(false)}
-      >
+      <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)}>
         {searchBarComponent}
       </SearchModal>
 
@@ -240,7 +197,6 @@ export default function DashboardWrapper({
             <LeftSidebar teamOfTheWeek={initialTeamOfTheWeek} latestNews={initialLatestNews} />
           </aside>
           <main className="w-full lg:flex-1 lg:order-2 lg:min-w-0">
-            
             {(query.length >= 3) && (
                 <div className="bg-gray-800 p-3 rounded-lg mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -253,10 +209,8 @@ export default function DashboardWrapper({
                 </div>
             )}
             
-        
-          <BannerSlider location="homepage" className="h-64" />
+            <BannerSlider location="homepage" className="h-64" />
        
-
             <MatchListContainer 
               matches={filteredMatches}
               selectedDate={selectedDate}

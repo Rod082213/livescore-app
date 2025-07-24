@@ -10,7 +10,7 @@ import Post from '@/models/Post';
 // CHANGE: Instead of 'force-dynamic', we use revalidation.
 // This tells Next.js to cache the sitemap and regenerate it at most once per day.
 // This is MUCH better for performance and reduces server load.
-export const revalidate = 60 * 60 * 24; // 24 hours in seconds
+export const revalidate = 86400;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com';
