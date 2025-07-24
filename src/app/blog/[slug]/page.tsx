@@ -3,35 +3,50 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import dbConnect from '@/lib/mongodb';
 import Post from '@/models/Post';
-import { IPost, IContentBlock, ITag } from '@/models/Post';
+import { IPost, IContentBlock } from '@/models/Post';
 import Header from '@/components/Header';
 import SportsNav from '@/components/SportsNav';
 import Footer from '@/components/Footer';
-import BlogPostLayout from '@/components/BlogPostLayout'; // We will create this next
+import BlogPostLayout from '@/components/BlogPostLayout';
 
 async function getPost(slug: string): Promise<IPost | null> {
   await dbConnect();
-  const post = await Post.findOne({ slug }).populate('categories', 'name').populate('tags', 'name').lean();
+  const post = await Post.findOne({ slug })
+    .populate('categories', '_id name')
+    .populate('tags', '_id name')
+    .lean();
   return post as IPost | null;
+}
+
+async function getRelatedPosts(categoryIds: string[], currentPostId: string): Promise<IPost[]> {
+  if (!categoryIds || categoryIds.length === 0) {
+    return [];
+  }
+  await dbConnect();
+  const posts = await Post.find({
+    categories: { $in: categoryIds },
+    _id: { $ne: currentPostId },
+  })
+  .sort({ createdAt: -1 })
+  .limit(4)
+  .select('title slug featuredImageUrl createdAt')
+  .lean();
+  return posts as IPost[];
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = await getPost(params.slug);
-  if (!post) return { title: "Post Not Found" };
+  if (!post) {
+    return { title: 'Post Not Found' };
+  }
 
   const publicDomain = 'https://todaylivescores.com';
   const canonicalUrl = `${publicDomain}/blog/${post.slug}`;
-  let imagePath = '/social-card-blog.png';
-  if (post.featuredImageUrl) {
-    try {
-      imagePath = new URL(post.featuredImageUrl, publicDomain).pathname;
-    } catch { /* Use default */ }
-  }
-  const imageUrl = `${publicDomain}${imagePath}`;
-  const mainTitle = post.title || "Untitled Article";
-  const firstParagraph = post.content?.blocks?.find((b: IContentBlock) => b.type === 'paragraph');
-  const safeDescription = (post.description || firstParagraph?.data.text || 'Read this article').replace(/<[^>]*>/g, '').slice(0, 160);
-  const authorName = post.author || 'TLiveScores Staff';
+  const defaultImage = '/social-card-blog.png';
+  const imageUrl = post.featuredImageUrl ? `${publicDomain}${post.featuredImageUrl}` : `${publicDomain}${defaultImage}`;
+  const mainTitle = post.title || 'Untitled Article';
+  const firstParagraph = post.content?.blocks?.find((b: IContentBlock) => b.type === 'paragraph')?.data.text || '';
+  const safeDescription = (post.description || firstParagraph).replace(/<[^>]*>/g, '').slice(0, 160);
   
   return {
     title: `${mainTitle} | TLiveScores`,
@@ -60,11 +75,17 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     notFound();
   }
 
+  const categoryIds = (post.categories as { _id: string }[] || []).map(cat => cat._id);
+  const relatedPosts = await getRelatedPosts(categoryIds, post._id.toString());
+
   return (
     <div className="bg-[#1d222d] text-white min-h-screen">
       <Header />
       <SportsNav />
-      <BlogPostLayout post={JSON.parse(JSON.stringify(post))} />
+      <BlogPostLayout
+        post={JSON.parse(JSON.stringify(post))}
+        relatedPosts={JSON.parse(JSON.stringify(relatedPosts))}
+      />
       <Footer />
     </div>
   );
