@@ -43,6 +43,8 @@ const BannerSlider = ({ location, className }: { location: string, className?: s
 
   if (banners.length === 0) return null;
 
+  const baseUrl = 'https://todaylivescores.com';
+
   return (
     <div className={`embla relative rounded-lg overflow-hidden ${className}`} ref={emblaRef}>
       <div className="embla__container h-full">
@@ -50,12 +52,12 @@ const BannerSlider = ({ location, className }: { location: string, className?: s
           <div className="embla__slide relative h-full" key={banner._id.toString()}>
             <Link href={banner.targetUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
              <div className="relative w-full h-100 rounded-xl overflow-hidden">
-                <Image 
-                  src={banner.imageUrl} 
-                  alt="Promotional Banner" 
-                  fill 
+                <Image
+                  src={banner.imageUrl.startsWith('http') ? banner.imageUrl : `${baseUrl}${banner.imageUrl}`}
+                  alt="Promotional Banner"
+                  fill
                   className="object-cover object-center"
-                  sizes="(max-width: 768px) 100vw, 50vw" 
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </div>
             </Link>
