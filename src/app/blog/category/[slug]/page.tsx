@@ -14,13 +14,11 @@ import BackButton from '@/components/BackButton';
 
 const PostCard = ({ post }: { post: IPost }) => {
   const summary = post.content?.blocks?.find(b => b.type === 'paragraph')?.data.text.replace(/<[^>]*>/g, '').slice(0, 100) + '...' || 'Click to read more.';
-  
   const publicDomain = 'https://todaylivescores.com';
-  let imageUrl = `${publicDomain}/placeholder-image.jpg`; // Fallback
+  let imageUrl = `${publicDomain}/placeholder-image.jpg`;
 
   if (post.featuredImageUrl) {
     try {
-      // This logic correctly extracts the path and builds a full public URL
       const imagePath = new URL(post.featuredImageUrl, publicDomain).pathname;
       imageUrl = `${publicDomain}${imagePath}`;
     } catch (e) {
@@ -66,7 +64,7 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }
         <ul className="space-y-2">
           {categories.map(cat => (
             <li key={cat._id.toString()}>
-              <Link href={`/blog/category/${cat.name.toLowerCase()}`} className="text-gray-300 hover:text-blue-400 transition-colors block capitalize">
+              <Link href={`/blog/category/${cat.name.toLowerCase().replace(/\s+/g, '-')}`} className="text-gray-300 hover:text-blue-400 transition-colors block capitalize">
                 {cat.name}
               </Link>
             </li>
@@ -77,7 +75,7 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }
         <h3 className="text-lg font-bold text-white mb-3">Tags</h3>
         <div className="flex flex-wrap gap-2">
           {tags.map(tag => (
-            <Link key={tag._id.toString()} href={`/blog/tag/${tag.name.toLowerCase()}`} className="bg-gray-700 text-gray-300 text-xs font-medium px-3 py-1 rounded-full hover:bg-gray-600 transition-colors">
+            <Link key={tag._id.toString()} href={`/blog/tag/${tag.name.toLowerCase().replace(/\s+/g, '-')}`} className="bg-gray-700 text-gray-300 text-xs font-medium px-3 py-1 rounded-full hover:bg-gray-600 transition-colors">
               #{tag.name}
             </Link>
           ))}
@@ -88,8 +86,10 @@ const Sidebar = ({ categories, tags }: { categories: ICategory[], tags: ITag[] }
 );
 
 async function getCategoryData(categorySlug: string) {
+  const categoryName = categorySlug.replace(/-/g, ' ');
+
   await dbConnect();
-  const category = await Category.findOne({ name: { $regex: new RegExp(`^${categorySlug}$`, 'i') } }).lean();
+  const category = await Category.findOne({ name: { $regex: new RegExp(`^${categoryName}$`, 'i') } }).lean();
   if (!category) return null;
 
   const [posts, allCategories, allTags] = await Promise.all([
@@ -107,10 +107,9 @@ async function getCategoryData(categorySlug: string) {
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const categorySlug = decodeURIComponent(params.slug);
-  const data = await getCategoryData(categorySlug);
+  const data = await getCategoryData(params.slug);
   const categoryName = data?.category.name ? `${data.category.name.charAt(0).toUpperCase()}${data.category.name.slice(1)}` : 'Category';
-  const canonicalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/blog/category/${categorySlug}`;
+  const canonicalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/blog/category/${params.slug}`;
 
   return {
     title: `Posts in: ${categoryName} | TLiveScores`,
@@ -125,8 +124,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function CategoryArchivePage({ params }: { params: { slug: string } }) {
-  const categorySlug = decodeURIComponent(params.slug);
-  const data = await getCategoryData(categorySlug);
+  const data = await getCategoryData(params.slug);
 
   if (!data) {
     notFound();
