@@ -7,19 +7,15 @@ import { createTeamSlug } from '@/lib/utils';
 import dbConnect from '@/lib/mongodb';
 import Post from '@/models/Post';
 
-// CHANGE: Instead of 'force-dynamic', we use revalidation.
-// This tells Next.js to cache the sitemap and regenerate it at most once per day.
-// This is MUCH better for performance and reduces server load.
-export const revalidate = 86400;
+export const revalidate = 86400; // Revalidate once per day
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com';
 
-  // Your concurrent fetching logic is excellent. No changes needed here.
   const [allNews, allLeagues, allPosts] = await Promise.all([
-    fetchNewsList().catch(() => []), // Fetch news
-    fetchAllTeamsFromAllLeagues().catch(() => []), // Fetch teams
-    (async () => { // Fetch blog posts
+    fetchNewsList().catch(() => []),
+    fetchAllTeamsFromAllLeagues().catch(() => []),
+    (async () => {
       await dbConnect();
       return Post.find({}).select('slug updatedAt').lean();
     })().catch(() => [])
@@ -31,8 +27,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/news`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/teams-list`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
-    // ADDED: The new /highlights page as requested
     { url: `${baseUrl}/highlights`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    // --- THIS IS THE NEW LINE YOU REQUESTED ---
+    { url: `${baseUrl}/predictions`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
   ];
 
   // 2. Dynamic news article pages
@@ -47,7 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const allTeams = allLeagues.flatMap(league => league.teams);
   const teamUrls: MetadataRoute.Sitemap = allTeams.map(team => ({
     url: `${baseUrl}/team/${createTeamSlug(team.name, team.id)}`,
-    lastModified: new Date(), // This is the best you can do if the API doesn't provide a date
+    lastModified: new Date(),
     changeFrequency: 'monthly',
     priority: 0.6,
   }));
