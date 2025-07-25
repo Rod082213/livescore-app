@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   description: 'Get daily match predictions and odds for upcoming football fixtures from around the world. In-depth analysis for your favorite leagues.',
   keywords: ['match predictions', 'football odds', 'daily fixtures', 'sports betting tips'],
   alternates: {
-    canonical: '/predictions',
+    canonical: 'https://todaylivescores.com/predictions',
   },
 };
 
