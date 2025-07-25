@@ -19,7 +19,7 @@ import { Odds } from "@/data/mockData";
 export const metadata: Metadata = {
   title: 'Live Sports Scores, Fixtures & Results',
   description: 'Get instant live scores, upcoming fixtures, and final results for football, basketball, tennis, and more. Your go-to source for the fastest sports updates.',
-  keywords: ['live scores', 'football scores', 'sports results', 'fixtures', 'standings', 'live football', 'basketball scores', 'tennis scores', 'todaylivescores'],
+  keywords: ['live scores', 'today live scores', 'football scores', 'sports results', 'fixtures', 'standings', 'live football', 'basketball scores', 'tennis scores', 'todaylivescores'],
   alternates: {
     canonical: '/',
   },

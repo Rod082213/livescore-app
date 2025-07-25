@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Highlight, Lineup, MatchLineupData } from './types';
 import { groupMatchesByLeague, mapApiFixtureToMatch } from './apiUtils';
 
+
 // ==================================================================
 // === FOOTBALL API CONFIGURATION (No Changes)                    ===
 // ==================================================================
@@ -26,6 +27,110 @@ type Team = {
   name: string;
   logo: string;
 };
+
+export interface PlayerDetails {
+  id: number;
+  name: string;
+  firstname: string;
+  lastname: string;
+  age: number;
+  nationality: string;
+  height: string;
+  weight: string;
+  photo: string;
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  league: {
+    id: number;
+    name: string;
+    country: string;
+    logo: string;
+    flag: string;
+  };
+  games: {
+    appearences: number;
+    lineups: number;
+    minutes: number;
+    position: string;
+    rating: string;
+  };
+  statistics: {
+    goals: number;
+    assists: number;
+    saves: number | null; // For goalkeepers
+  };
+};
+
+export const fetchPlayerDetails = cache(async (playerId: string, season: string = "2024"): Promise<PlayerDetails | null> => {
+  if (!FOOTBALL_API_KEY || !playerId) return null;
+
+  try {
+    const url = `${FOOTBALL_API_URL}/players?id=${playerId}&season=${season}`;
+    const response = await fetch(url, footballServerOptions);
+    
+    if (!response.ok) {
+      console.error(`[API Error] Failed to fetch player details for ID: ${playerId}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const playerData = data.response?.[0];
+
+    if (!playerData) {
+      console.warn(`[API] No player details found for ID: ${playerId}`);
+      return null;
+    }
+
+    // Map the raw API data to our clean PlayerDetails type
+    const p = playerData;
+    const stats = p.statistics[0]; // Assuming we always get one stats object for the season
+
+    const mappedPlayer: PlayerDetails = {
+      id: p.player.id,
+      name: p.player.name,
+      firstname: p.player.firstname,
+      lastname: p.player.lastname,
+      age: p.player.age,
+      nationality: p.player.nationality,
+      height: p.player.height || 'N/A',
+      weight: p.player.weight || 'N/A',
+      photo: p.player.photo,
+      team: {
+        id: stats.team.id,
+        name: stats.team.name,
+        logo: stats.team.logo,
+      },
+      league: {
+        id: stats.league.id,
+        name: stats.league.name,
+        country: stats.league.country,
+        logo: stats.league.logo,
+        flag: stats.league.flag,
+      },
+      games: {
+        appearences: stats.games.appearences || 0,
+        lineups: stats.games.lineups || 0,
+        minutes: stats.games.minutes || 0,
+        position: stats.games.position || 'N/A',
+        rating: parseFloat(stats.games.rating || '0').toFixed(1),
+      },
+      statistics: {
+        goals: stats.goals.total || 0,
+        assists: stats.goals.assists || 0,
+        saves: stats.goals.saves, // This can be null for non-goalkeepers
+      }
+    };
+
+    return mappedPlayer;
+
+  } catch (error) {
+    console.error(`[fetchPlayerDetails] A critical error occurred:`, error);
+    return null;
+  }
+});
 
 export const fetchMatchesByDate = cache(async (date: string): Promise<LeagueGroup[]> => {
     if (!FOOTBALL_API_KEY) return [];
@@ -231,9 +336,23 @@ export const fetchTeamOfTheWeek = cache(async (leagueId: string = "39", season: 
         const response = await fetch(url, footballServerOptions);
         if (!response.ok) return [];
         const data = await response.json();
-        const topPlayers: ApiPlayer[] = data.response?.slice(0, 5) || [];
-        return topPlayers.map(p => ({ name: p.player.name, rating: parseFloat(p.statistics[0].games.rating || '0').toFixed(1), logo: p.statistics[0].team.logo }));
-    } catch (error) { return []; }
+        
+        const topPlayers: ApiPlayer[] = data.response?.slice(0, 11) || [];
+
+        return topPlayers.map(p => ({ 
+            id: p.player.id,
+            name: p.player.name, 
+            rating: parseFloat(p.statistics[0].games.rating || '0').toFixed(1), 
+            logo: p.statistics[0].team.logo,
+            // These two fields are ESSENTIAL for the new URL structure
+            teamId: p.statistics[0].team.id,
+            teamName: p.statistics[0].team.name,
+            photo: p.player.photo 
+        }));
+    } catch (error) { 
+        console.error("Error fetching Team of the Week:", error);
+        return []; 
+    }
 });
 export const fetchAllTopPlayers = cache(async (leagueId: string = "39", season: string = "2024"): Promise<Player[]> => {
     if (!FOOTBALL_API_KEY) return [];

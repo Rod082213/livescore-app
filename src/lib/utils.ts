@@ -27,6 +27,9 @@ export const createLeagueSlug = (name: string, id: number): string => {
     const baseSlug = createSlug(name);
     return `${baseSlug}-${id}`;
 };
+
+
+
 export function generateSlug(homeTeam: string, awayTeam: string, id: number): string {
     const cleanedHome = createSlug(homeTeam);
     const cleanedAway = createSlug(awayTeam);

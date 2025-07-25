@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Player, NewsArticleSummary } from "@/lib/types"; // Assuming types are in /lib/types
-import { Carousel } from "./Carousel"; // Your custom Carousel component
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery"; // Your custom hook
+import { Player, NewsArticleSummary } from "@/lib/types"; 
+import { Carousel } from "./Carousel"; 
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { createTeamSlug } from "@/lib/utils"; // 1. Import the slug utility
 
-// A small, robust helper function for formatting dates
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Date unavailable';
   try {
@@ -24,51 +24,51 @@ interface LeftSidebarProps {
   latestNews: NewsArticleSummary[];
 }
 
-/**
- * A responsive sidebar that displays a carousel on mobile and a 
- * full vertical list of 5 items on desktop.
- */
 const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
-  // This hook determines if the screen is mobile or desktop.
-  // The 'lg' breakpoint (1024px) is a good switch point.
   const isMobile = useMediaQuery('(max-width: 1023px)');
-
-  // Slicing logic is handled here to ensure it never displays more than 5
   const teamForDisplay = Array.isArray(teamOfTheWeek) ? teamOfTheWeek.slice(0, 5) : [];
   const newsForDisplay = Array.isArray(latestNews) ? latestNews.slice(0, 5) : [];
 
   return (
     <aside className="space-y-6">
       
-      {/* --- TEAM OF THE WEEK WIDGET --- */}
       <div className="bg-[#2b3341] rounded-lg p-4 shadow-lg">
         <h3 className="text-lg font-bold text-white mb-4 border-b border-gray-700 pb-2">
           Team of the Week
         </h3>
         {teamForDisplay.length > 0 ? (
           isMobile ? (
-            // --- MOBILE VIEW: RENDER CAROUSEL ---
             <Carousel options={{ loop: true }}>
               {teamForDisplay.map((player) => (
-                <div key={player.id || player.name} className="flex items-center justify-between gap-3 flex-[0_0_100%]">
+                // 2. Build the new nested URL for the player link
+                <Link 
+                  href={`/teams-list/${createTeamSlug(player.teamName, player.teamId)}/player/${player.id}`} 
+                  key={player.id} 
+                  className="flex items-center justify-between gap-3 flex-[0_0_100%] group"
+                >
                   <div className="flex items-center gap-3">
-                    <Image src={player.logo} alt={`${player.name} logo`} width={32} height={32} className="rounded-full bg-gray-600 object-cover"/>
-                    <span className="font-medium text-sm text-white">{player.name}</span>
+                    <Image src={player.logo} alt={`${player.teamName} logo`} width={32} height={32} className="rounded-full bg-gray-600 object-cover"/>
+                    <span className="font-medium text-sm text-white group-hover:text-blue-400 transition-colors">{player.name}</span>
                   </div>
                   <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded-md">{parseFloat(player.rating).toFixed(1)}</span>
-                </div>
+                </Link>
               ))}
             </Carousel>
           ) : (
-            // --- DESKTOP VIEW: RENDER VERTICAL LIST ---
-            <ul className="space-y-4">
+            <ul className="space-y-2">
               {teamForDisplay.map((player) => (
-                <li key={player.id || player.name} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <Image src={player.logo} alt={`${player.name} logo`} width={32} height={32} className="rounded-full bg-gray-600 object-cover"/>
-                    <span className="font-medium text-sm text-white">{player.name}</span>
-                  </div>
-                  <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded-md">{parseFloat(player.rating).toFixed(1)}</span>
+                <li key={player.id}>
+                   {/* 3. Build the same nested URL for the desktop view */}
+                   <Link 
+                     href={`/teams-list/${createTeamSlug(player.teamName, player.teamId)}/player/${player.id}`} 
+                     className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-gray-700/50 group transition-colors"
+                   >
+                      <div className="flex items-center gap-3">
+                        <Image src={player.logo} alt={`${player.teamName} logo`} width={32} height={32} className="rounded-full bg-gray-600 object-cover"/>
+                        <span className="font-medium text-sm text-white group-hover:text-blue-400 transition-colors">{player.name}</span>
+                      </div>
+                      <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded-md">{parseFloat(player.rating).toFixed(1)}</span>
+                   </Link>
                 </li>
               ))}
             </ul>
@@ -78,14 +78,12 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
         )}
       </div>
 
-      {/* --- LATEST NEWS WIDGET --- */}
       <div className="bg-[#2b3341] rounded-lg p-4 shadow-lg">
         <h3 className="text-lg font-bold text-white mb-4 border-b border-gray-700 pb-2">
           Latest News
         </h3>
         {newsForDisplay.length > 0 ? (
           isMobile ? (
-            // --- MOBILE VIEW: RENDER CAROUSEL ---
             <Carousel options={{ loop: true }}>
               {newsForDisplay.map((article) => (
                 <Link href={`/news/${article.slug}`} className="flex items-start gap-3 group flex-[0_0_100%]" key={article.id || article.slug}>
@@ -101,7 +99,6 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
               ))}
             </Carousel>
           ) : (
-            // --- DESKTOP VIEW: RENDER VERTICAL LIST ---
             <ul className="space-y-4">
               {newsForDisplay.map((article) => (
                 <li key={article.id || article.slug}>

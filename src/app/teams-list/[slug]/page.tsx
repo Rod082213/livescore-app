@@ -40,7 +40,6 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
 
   const team = teamInfo.team;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://todaylivescores.com';
-  // --- THIS IS THE CRITICAL SEO UPDATE ---
   const canonicalUrl = `${siteUrl}/teams-list/${slug}`;
   
   const dynamicTitle = `${team.name}: Live Scores, Fixtures & Standings`;
@@ -56,7 +55,7 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
     authors: [{ name: 'TodayLiveScores' }],
     publisher: 'TodayLiveScores',
     alternates: {
-      canonical: canonicalUrl, // Use the updated URL here
+      canonical: canonicalUrl,
     },
     robots: {
       index: true,
@@ -65,7 +64,7 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
     openGraph: {
       title: dynamicTitle,
       description: dynamicDescription,
-      url: canonicalUrl, // And also here
+      url: canonicalUrl,
       siteName: 'TodayLiveScores',
       images: [{
         url: team.logo, 
@@ -86,7 +85,6 @@ export async function generateMetadata({ params: { slug } }: PageProps): Promise
 }
 
 export default async function TeamDetailPage({ params: { slug } }: PageProps) {
-    // ... No changes needed to the page component itself
     const teamId = getTeamIdFromSlug(slug);
 
   if (!teamId) {
@@ -130,7 +128,8 @@ export default async function TeamDetailPage({ params: { slug } }: PageProps) {
               <LeagueStandings standings={standings} teamId={Number(teamId)} />
             </div>
             <div className="lg:col-span-2">
-              <SquadList squad={squad} />
+              {/* This is the only change needed. We pass the slug to the component. */}
+              <SquadList squad={squad} teamSlug={slug} />
             </div>
           </div>
         </div>
@@ -141,9 +140,8 @@ export default async function TeamDetailPage({ params: { slug } }: PageProps) {
 }
 
 export async function generateStaticParams() {
-    // ... No changes needed here either
     const allLeagues = await fetchAllTeamsFromAllLeagues();
-  if (!allLeagues || allLeagues.length === 0) return []; // Graceful fallback
+  if (!allLeagues || allLeagues.length === 0) return [];
   
   const allTeams = allLeagues.flatMap(league => league.teams);
  
