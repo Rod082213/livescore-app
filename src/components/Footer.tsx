@@ -43,15 +43,15 @@ const Footer = () => {
             <ul className="space-y-3"> {/* Increased vertical spacing */}
               <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">About Us</a></li>
               <li><a href="/contact" className="text-gray-400 hover:text-white text-sm transition-colors">Contact Us</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Press</a></li>
+              <li><a href="/news" className="text-gray-400 hover:text-white text-sm transition-colors">Sport News</a></li>
+              <li><a href="/blog" className="text-gray-400 hover:text-white text-sm transition-colors">Blogs</a></li>
             </ul>
           </div>
           <div>
             <h2 className="text-lg font-bold text-white mb-4">Legal</h2>
             <ul className="space-y-3"> {/* Increased vertical spacing */}
-              <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Terms of Use</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Cookie Policy</a></li>
+              <li><a href="/term-of-use" className="text-gray-400 hover:text-white text-sm transition-colors">Terms of Use</a></li>
+              <li><a href="/privacy-policy" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a></li>
             </ul>
           </div>
           

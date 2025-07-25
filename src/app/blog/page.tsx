@@ -127,7 +127,7 @@ export default async function BlogListPage({ searchParams }: { searchParams?: { 
         <div className="mb-8">
             <BackButton href="/matches" text="Back to All Matches" />
         </div>
-        <h1 className="text-center text-4xl md:text-5xl font-extrabold mb-12">Our Blog</h1>
+        <h1 className="text-center text-4xl md:text-5xl font-extrabold mb-12">Today Live Scores Blog</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-8">
           <main className="lg:col-span-9">
