@@ -44,7 +44,7 @@ export default async function RedirectsPage() {
         <div className="bg-slate-900 min-h-screen p-4 sm:p-6 md:p-8 text-white">
             <h1 className="text-3xl font-bold mb-8">Redirect Manager</h1>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <div className="bg-transparent p-0">
+                <div className="space-y-6 p-4 bg-gray-800 rounded-lg">
                     <h2 className="text-xl font-bold text-white mb-6">Create New Redirect</h2>
                     <form action={addRedirect} className="space-y-6">
                         <div>
@@ -88,12 +88,12 @@ export default async function RedirectsPage() {
                         </div>
                     </form>
                 </div>
-                <div className="bg-transparent p-0">
+                <div className="space-y-6 p-4 bg-gray-800 rounded-lg">
                     <h2 className="text-xl font-bold text-white mb-6">Current Redirects</h2>
                     <div className="space-y-4">
                         {redirects.length > 0 ? (
                             redirects.map((redirect) => (
-                                <div key={redirect._id} className="bg-slate-800 p-4 rounded-lg shadow-lg">
+                                <div key={redirect._id}>
                                     <div className="flex justify-between items-start">
                                         <div className="flex gap-4">
                                             <LinkIcon className="h-6 w-6 text-gray-400 flex-shrink-0 mt-1" />
