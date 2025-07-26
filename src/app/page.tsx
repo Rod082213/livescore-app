@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   description: 'Get instant live scores, upcoming fixtures, and final results for football, basketball, tennis, and more. Your go-to source for the fastest sports updates.',
   keywords: ['live scores', 'today live scores', 'football scores', 'sports results', 'fixtures', 'standings', 'live football', 'basketball scores', 'tennis scores', 'todaylivescores'],
   alternates: {
-    canonical: '/',
+    canonical: 'https://todaylivescores.com/',
   },
   openGraph: {
     title: 'Live Sports Scores, Fixtures & Results | TodayLiveScores',
