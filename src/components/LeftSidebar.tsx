@@ -34,7 +34,7 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
       
       <div className="bg-[#2b3341] rounded-lg p-4 shadow-lg">
         <h3 className="text-lg font-bold text-white mb-4 border-b border-gray-700 pb-2">
-          Team of the Week
+          Player of the Week
         </h3>
         {teamForDisplay.length > 0 ? (
           isMobile ? (
@@ -74,7 +74,7 @@ const LeftSidebar = ({ teamOfTheWeek, latestNews }: LeftSidebarProps) => {
             </ul>
           )
         ) : (
-          <p className="text-center text-gray-400 py-8 text-sm">Team of the Week data is unavailable.</p>
+          <p className="text-center text-gray-400 py-8 text-sm">Player of the Week data is unavailable.</p>
         )}
       </div>
 
