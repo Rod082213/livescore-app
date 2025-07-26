@@ -27,7 +27,7 @@ const TermsOfUsePage = () => {
       
       <h1 className="text-3xl font-bold mb-4">TERMS OF USE</h1>
       <p className="mb-4">
-        <strong>Today Live Scores</strong> – https://todaylivescores.com/
+        <strong>Today Live Scores</strong> todaylivescores.com
         <br />
         <strong>Address:</strong> 19 Oakworth Rd, South End, Gqeberha, 6001, Republic of South Africa
       </p>
